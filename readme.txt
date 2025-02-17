@@ -1,6 +1,6 @@
 You must have installed postgres and node.js 
 Change the Database Url in env file according to your postgres username and password
-sample url : DATABASE_URL="postgresql://postgres:sherry123@localhost:5432/accounts"
+sample url : DATABASE_URL="postgresql://postgres:sherry123@localhost:5432/events_tracking"
 in this username = postgres ::: where it might be different based on your postgres username
 in this password = sherry123 ::: where it might be different based on your postgres password
 
