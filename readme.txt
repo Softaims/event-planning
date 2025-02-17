@@ -15,3 +15,6 @@ npm run prisma:seed
 
 You can watch your database enteries using the prisma studio too alternatively you can watch your data on postgresql window app as well:
 npx prisma studio
+
+Please run this command 
+npm start 
