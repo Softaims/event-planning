@@ -1,0 +1,68 @@
+{
+    "interests": {
+        "creativeArts": [
+            "Art",
+            "Photography",
+            "Content Creation",
+            "Movies",
+            "Anime",
+            "Reading",
+            "Writing",
+            "DIY/Crafts"
+        ],
+        "foodDrink": [
+            "Cooking",
+            "Foodie",
+            "Coffee Enthusiast",
+            "Wine Tasting",
+            "Brunch Culture"
+        ],
+        "fitnessWellness": [
+            "Fitness",
+            "Yoga",
+            "Hiking",
+            "Swimming",
+            "Tennis",
+            "Volleyball",
+            "Pickleball",
+            "Church",
+            "Dance"
+        ],
+        "sportsGaming": [
+            "Basketball",
+            "Baseball",
+            "Hockey",
+            "Football",
+            "Soccer",
+            "Wrestling",
+            "Sports Betting",
+            "Video Games"
+        ],
+        "lifestyleFashion": [
+            "Streetwear",
+            "Makeup",
+            "Travel",
+            "Astrology",
+            "Thrifting"
+        ],
+        "outdoorAdventure": [
+            "Snowboarding",
+            "Skating",
+            "Fishing",
+            "Golf",
+            "Hiking",
+            "Camping"
+        ],
+        "nightlifeMusic": [
+            "Live Music",
+            "Bar Hoping",
+            "Clubbing",
+            "Festival Culture"
+        ],
+        "techDigital": [
+            "Coding",
+            "Crypto/NFTs",
+            "Startups"
+        ]
+    }
+}

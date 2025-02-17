@@ -1,0 +1,22 @@
+{
+    "eventTypes": [
+        "Concert/Show",
+        "Pop-up",
+        "Happy Hour",
+        "Open Mic",
+        "Live Music",
+        "Art Gallery",
+        "Networking",
+        "Brunch",
+        "Birthday Party",
+        "Reunion",
+        "Game Night",
+        "Dance Party",
+        "Food Festival",
+        "Comedy Show",
+        "Conference",
+        "Trivia Night",
+        "Workshop",
+        "Launch Party"
+    ]
+}

@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define an Enum for User Roles
+enum Role {
+  Admin
+  User
+}
+
+// Define an Enum for Pronouns Selection
+enum Pronouns {
+  he_him
+  she_her
+  they_them
+  other
+}
+
+// Define the User model
+model User {
+  id        Int    @id @default(autoincrement())
+  email     String @unique
+  emailVerified Boolean  @default(false)
+  emailVerificationToken String?
+  password  String
+  firstName String
+  lastName  String
+  phoneNumber String @unique
+  dob       DateTime
+  pronouns  Pronouns?
+  profileImage String?  
+  passwordChangedAt DateTime @default(now())
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  active Boolean @default(true)
+  role Role @default(User)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  currentAuthToken String?
+  preferences UserPreferences?
+}
+
+model UserPreferences {
+  id          Int     @id @default(autoincrement())
+  userId      Int     @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)  
+  preferences Json?    
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
