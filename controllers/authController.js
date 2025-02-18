@@ -36,7 +36,7 @@ exports.register = catchAsync(async (req, res, next) => {
     } catch (err) {
         logger.error(`Failed to send verification code to: ${newUser.phoneNumber}`, err);
         // 🛑 **Delete the user if OTP fails**
-        // await authService.deleteUser(newUser.id);
+        await authService.deleteUser(newUser.id);
         return next(new AppError('Failed to send verification code.', 500));
     }
 
