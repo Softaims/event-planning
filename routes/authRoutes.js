@@ -11,7 +11,7 @@ router.post('/login', authValidations.login, validationMiddleware.validate, auth
 router.post('/forgot-password', authValidations.forgotPassword, validationMiddleware.validate, authController.forgotPassword);
 router.patch('/reset-password/:otp', authValidations.resetPassword, validationMiddleware.validate, authController.resetPassword);
 router.get('/logout', authMiddleware.protect, authController.logout);
-router.post('/resend-verification-email', authController.resendVerificationEmail);
-router.get('/verify-email/:otp', authController.verifyEmail);
+router.post('/resend-verification-code', authController.resendVerificationCode);
+router.get('/verify-phone/:otp', authController.verifyPhoneCode);
 
 module.exports = router;

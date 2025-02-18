@@ -70,11 +70,11 @@ const authValidations = {
             .isURL().withMessage('Profile image must be a valid URL.')
     ],
     login: [
-        check('email').isEmail().withMessage('Please provide a valid email address.'),
+        check('phoneNumber').not().isEmpty().withMessage('Phone Number is required.'),
         check('password').not().isEmpty().withMessage('Password is required.'),
     ],
     forgotPassword: [
-        check('email').isEmail().withMessage('Please provide a valid email address.'),
+        check('phoneNumber').isEmail().withMessage('Please provide a valid phone number.'),
     ],
     resetPassword: [
         check('password')

@@ -2,19 +2,17 @@ const authService = require('../services/authService');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
-const EmailService = require('../services/EmailService');
 const { prisma } = require('../db');
+const twilioService = require('../utils/twilioService');
 
 exports.register = catchAsync(async (req, res, next) => {
     let { email, password, firstName, lastName, phoneNumber, dob, pronouns, profileImage } = req.body;
-
     dob = new Date(dob)
 
-    // Check if the user already exists
-    const existingUser = await authService.findUserByEmail(email);
+    // Check if phone already exists
+    const existingUser = await authService.findUserByPhone(phoneNumber);
     if (existingUser) {
-        logger.error(`Registration attempt with existing email: ${email}`);
-        return next(new AppError('Email already in use.', 409));
+        return next(new AppError('Phone number already in use.', 400));
     }
 
     // Register the user
@@ -29,33 +27,32 @@ exports.register = catchAsync(async (req, res, next) => {
         profileImage,
     });
 
-    // Generate email verification token
-    const verificationToken = await authService.generateEmailVerificationToken(newUser);
+    // Send OTP via Twilio
+    const verificationCode = await authService.sendPhoneVerification(newUser.id, newUser.phoneNumber);
 
-    console.log("verificationToken :", verificationToken)
-
-    // Send verification email in the background
-    setImmediate(async () => {
-        const emailService = new EmailService(newUser, verificationToken); // Pass the 6-digit code
-        try {
-            await emailService.sendVerificationEmail();
-            logger.info(`Verification email sent to: ${newUser.email}`);
-        } catch (err) {
-            logger.error(`Failed to send verification email to: ${newUser.email}`, err);
-            await authService.verifyAccount(newUser, true);
-            return next(new AppError('There was an error sending the email. Try again later!', 500));
-        }
-    });
+    try {
+        // Send SMS via Twilio
+        await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
+    } catch (err) {
+        logger.error(`Failed to send verification code to: ${newUser.phoneNumber}`, err);
+        // 🛑 **Delete the user if OTP fails**
+        // await authService.deleteUser(newUser.id);
+        return next(new AppError('Failed to send verification code.', 500));
+    }
 
     // Send JWT token
     authService.createSendToken(res, newUser, 201, isSignup = true);
 
-    logger.info(`User registered: ${newUser.email}`);
+    logger.info(`User registered: ${newUser.phoneNumber}`);
 });
 
-exports.verifyEmail = catchAsync(async (req, res, next) => {
+exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
     const { otp } = req.params; // User submits email and OTP
     console.log("OTP Provided:", otp);
+
+    if (!otp) {
+        return next(new AppError('Verification code are required.', 400));
+    }
 
     const hashedOtp = authService.hashToken(otp); // Hash OTP for security
     console.log("Hashed OTP:", hashedOtp);
@@ -63,7 +60,7 @@ exports.verifyEmail = catchAsync(async (req, res, next) => {
     // Find user with matching email and OTP
     const user = await prisma.user.findFirst({
         where: {
-            emailVerificationToken: hashedOtp, // Check OTP match
+            phoneVerificationToken: hashedOtp, // Check OTP match
         },
     });
 
@@ -76,53 +73,52 @@ exports.verifyEmail = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         status: "success",
-        message: "Email verified successfully! You can now log in."
+        message: "Phone Number verified successfully! You can now log in."
     });
 });
 
-exports.resendVerificationEmail = catchAsync(async (req, res, next) => {
-    const { email } = req.body; // User provides email in request
+exports.resendVerificationCode = catchAsync(async (req, res, next) => {
+    const { phoneNumber } = req.body; // User provides phoneNumber in request
 
-    if (!email) {
-        return next(new AppError('Email is required to resend verification code.', 400));
+    if (!phoneNumber) {
+        return next(new AppError('Phone Number is required to resend verification code.', 400));
     }
 
-    // Find user by email
+    // Find user by phoneNumber
     const user = await prisma.user.findUnique({
-        where: { email, emailVerified: false }, // Ensure email is not verified already
+        where: { phoneNumber, phoneVerified: false },
     });
 
     if (!user) {
-        return next(new AppError('No unverified user found with this email.', 404));
+        return next(new AppError('No unverified user found with this phone number.', 404));
     }
 
-    // Generate a new OTP and store it in the database
-    const verificationToken = await authService.generateEmailVerificationToken(user);
+    // Send OTP via Twilio
+    const verificationCode = await authService.sendPhoneVerification(user.id, user.phoneNumber);
 
-    // Send the new OTP via email
-    const emailService = new EmailService(user, verificationToken);
     try {
-        await emailService.sendVerificationEmail();
-        logger.info(`Verification email resent to: ${user.email}`);
-        res.status(200).json({ message: 'Verification email resent successfully!' });
+        // Send SMS via Twilio
+        await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        logger.info(`Verification code resent to: ${user.phoneNumber}`);
+        res.status(200).json({ message: 'Verification code resent successfully!' });
     } catch (err) {
-        logger.error(`Failed to resend verification email to: ${user.email}`, err);
-        return next(new AppError('Failed to send verification email.', 500));
+        logger.error(`Failed to resend verification code to: ${user.phoneNumber}`, err);
+        return next(new AppError('Failed to send verification code.', 500));
     }
 });
 
 exports.login = catchAsync(async (req, res, next) => {
-    const { email, password } = req.body;
+    const { phoneNumber, password } = req.body;
 
-    const user = await authService.findUserByEmail(email);
+    const user = await authService.findUserByPhone(phoneNumber);
 
     if (!user || !(await authService.comparePassword(password, user.password))) {
-        logger.error(`Invalid login attempt for email: ${email}`);
-        return next(new AppError('Incorrect email or password.', 401));
+        logger.error(`Invalid login attempt for phoneNumber: ${phoneNumber}`);
+        return next(new AppError('Incorrect Phone Number or password.', 401));
     }
 
-    if (!user.emailVerified) {
-        return next(new AppError('Please verify your email address.', 401));
+    if (!user.phoneVerified) {
+        return next(new AppError('Please verify your phone number.', 401));
     }
 
     authService.createSendToken(res, user, 200);
@@ -152,54 +148,50 @@ exports.logout = catchAsync(async (req, res, next) => {
 });
 
 exports.forgotPassword = catchAsync(async (req, res, next) => {
-    const { email } = req.body;
+    const { phoneNumber } = req.body;
 
     // 1) Get user based on email
-    const user = await authService.findUserByEmail(email);
+    const user = await authService.findUserByPhone(phoneNumber);
     if (!user) {
-        logger.error(`Password reset requested for non-existent email: ${email}`);
-        return next(new AppError('There is no user with that email address.', 404));
+        logger.error(`Password reset requested for non-existent phone number: ${phoneNumber}`);
+        return next(new AppError('There is no user with that phone number.', 400));
     }
 
     // 2) Generate a 6-digit numeric OTP
     const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedToken = authService.hashToken(resetToken);
 
-    // 3) Save OTP in database (expires in 10 minutes)
+    // 3) Save OTP in database
     await prisma.user.update({
         where: { id: user.id },
         data: {
             passwordResetToken: hashedToken,
-            passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes
         },
     });
 
-    // 4) Send OTP via email
-    try {
-        const emailService = new EmailService(user, resetToken); // Send plain OTP
-        await emailService.sendPasswordReset();
 
-        logger.info(`Password reset OTP sent to: ${user.email}`);
+    try {
+        // Send SMS via Twilio
+        await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        logger.info(`Password reset OTP sent to: ${user.phoneNumber}`);
         res.status(200).json({
             status: 'success',
-            message: 'Password reset OTP sent to your email!',
+            message: 'Password reset OTP sent to your phone number!',
         });
     } catch (err) {
-        logger.error(`Error sending password reset email to: ${user.email}`, err);
+        logger.error(`Error sending password reset code to: ${user.phoneNumber}`, err);
 
         // If email fails, remove OTP from database
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                passwordResetToken: null,
-                passwordResetExpires: null,
+                passwordResetToken: null
             },
         });
 
-        return next(new AppError('There was an error sending the email. Try again later!', 500));
+        return next(new AppError('There was an error sending the code. Try again later!', 500));
     }
 });
-
 
 exports.resetPassword = catchAsync(async (req, res, next) => {
     // 1) Get user based on the token
@@ -208,8 +200,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
     const user = await prisma.user.findFirst({
         where: {
-            passwordResetToken: hashedOtp,
-            passwordResetExpires: { gt: new Date() },
+            passwordResetToken: hashedOtp
         },
     });
 
@@ -224,7 +215,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     await authService.resetPassword(user, hashedPassword);
 
     // 4) Log the user in, send JWT
-    logger.info(`Password reset successfully for user: ${user.email}`);
+    logger.info(`Password reset successfully for user: ${user.phoneNumber}`);
 
     res.status(200).json({
         status: 'success',

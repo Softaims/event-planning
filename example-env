@@ -1,0 +1,19 @@
+NODE_ENV=development
+PORT=8016
+DATABASE_URL="postgresql://user_name:password@localhost:5432/db_name"
+JWT_SECRET_TOKEN=secret
+JWT_COOKIE_EXPIRES_IN=30d
+JWT_EXPIRES_IN=30d
+
+# Email Configuration
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+EMAIL_USERNAME=your-email@example.com
+EMAIL_PASSWORD=your-email-password
+EMAIL_FROM="Your Name <example@example.com>"
+
+# Twilio
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE=

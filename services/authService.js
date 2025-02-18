@@ -66,6 +66,13 @@ const findUserByEmail = async (email) => {
     });
 };
 
+// Find User by Email
+const findUserByPhone = async (phoneNumber) => {
+    return await prisma.user.findUnique({
+        where: { phoneNumber },
+    });
+};
+
 // Find User by ID
 const findUserById = async (id) => {
     return await prisma.user.findUnique({
@@ -84,6 +91,7 @@ const registerUser = async (userData) => {
 
     return newUser;
 };
+
 const generateEmailVerificationToken = async (user) => {
     // Generate a 6-digit numeric code
     const verifyEmailCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -101,6 +109,23 @@ const generateEmailVerificationToken = async (user) => {
 
     return verifyEmailCode; // Return the plain 6-digit code for sending via email
 };
+
+const sendPhoneVerification = async (userId, phoneNumber) => {
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    // Hash the code before storing in the database for security
+    const hashedCode = hashToken(verificationCode);
+
+    // Save OTP and expiration in the database
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            phoneVerificationToken: hashedCode
+        }
+    });
+
+    return verificationCode;
+};
+
 
 const generateToken = () => crypto.randomBytes(20).toString('hex');
 
@@ -140,12 +165,15 @@ const verifyAccount = async (user) => {
     await prisma.user.update({
         where: { id: user.id },
         data: {
-            emailVerified: true,
-            emailVerificationToken: null,
+            phoneVerified: true,
+            phoneVerificationToken: null,
         },
     });
 };
 
+const deleteUser = async (userId) => {
+    await prisma.user.delete({ where: { id: userId } });
+};
 
 module.exports = {
     signToken,
@@ -160,5 +188,8 @@ module.exports = {
     resetPassword,
     generateEmailVerificationToken,
     hashToken,
-    verifyAccount
+    verifyAccount,
+    findUserByPhone,
+    sendPhoneVerification,
+    deleteUser
 };
