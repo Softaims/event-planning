@@ -12,7 +12,7 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Preferences updated successfully.',
-        data: updatedPreferences,
+        data: { preferences: updatedPreferences.preferences },
     });
 });
 
@@ -25,6 +25,7 @@ exports.getPreferences = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         status: 'success',
-        data: preferences,
+        message: 'Preferences fetched successfully.',
+        data: { preferences: preferences.preferences },
     });
 });

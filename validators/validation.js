@@ -4,7 +4,8 @@ const constants = require("../constants");
 const emailValidator = require('email-validator');
 
 const isValidEntry = (value, list) => {
-    return list.map(item => item.toLowerCase()).includes(value.toLowerCase());
+    if (!Array.isArray(list)) return false; // Ensure list is an array
+    return list.map(item => item.toLowerCase().trim()).includes(value.toLowerCase().trim());
 };
 
 
@@ -81,6 +82,16 @@ const authValidations = {
                 }
                 return true;
             }),
+
+        check('lat')
+            .optional()
+            .isFloat({ min: -90, max: 90 })
+            .withMessage('Invalid latitude value.'),
+
+        check('long')
+            .optional()
+            .isFloat({ min: -180, max: 180 })
+            .withMessage('Invalid longitude value.'),
     ],
     login: [
         check('phoneNumber')
@@ -110,21 +121,59 @@ const authValidations = {
 // Add other validations if needed
 const userValidations = {
     updateProfile: [
-        check('name').not().isEmpty().withMessage('Name is required.'),
-        // Other checks for profile update can be added here
+        check('firstName').optional().trim().notEmpty().withMessage('First Name cannot be empty.'),
+        check('lastName').optional().trim().notEmpty().withMessage('Last Name cannot be empty.'),
+        check('email')
+            .optional()
+            .isEmail().withMessage('Please provide a valid email address.')
+            .bail()
+            .custom(async (email) => {
+                // 1️⃣ Check if the email is valid using email-validator
+                if (!emailValidator.validate(email)) {
+                    throw new Error('Invalid email format.');
+                }
+                return true;
+            }),
+        check('dob')
+            .optional()
+            .not().isEmpty().withMessage('Date of Birth is required.'),
+        check('pronouns')
+            .optional()
+            .isIn(['he_him', 'she_her', 'they_them', 'other'])
+            .withMessage('Invalid pronoun selection.'),
+        check('lat')
+            .optional()
+            .isFloat({ min: -90, max: 90 })
+            .withMessage('Invalid latitude value.'),
+        check('long')
+            .optional()
+            .isFloat({ min: -180, max: 180 })
+            .withMessage('Invalid longitude value.'),
+        check('profileImage')
+            .optional()
+            .custom((_, { req }) => {
+                if (!req.file) {
+                    throw new Error('Profile image is required.');
+                }
+
+                const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+                if (!allowedMimeTypes.includes(req.file.mimetype)) {
+                    throw new Error('Profile image must be a valid image file (JPEG, PNG, JPG).');
+                }
+                return true;
+            }),
     ],
 };
 
 const preferencesValidations = [
     check('preferences')
-        .exists()
-        .withMessage('Preferences JSON is required.')
+        .exists().withMessage('Preferences JSON is required.')
         .custom(value => {
             if (typeof value !== 'object' || value === null) {
                 throw new Error('Preferences must be a valid JSON object.');
             }
 
-            // Ensure required keys exist even if empty
+            // Required preference fields
             const requiredKeys = [
                 "bio", "major", "college", "interests",
                 "musicGenre", "zodiacSign", "socialLinks",
@@ -133,11 +182,18 @@ const preferencesValidations = [
                 "favoriteSportsTeams"
             ];
 
+            const missingKeys = [];
+
             requiredKeys.forEach(key => {
-                if (!Object.prototype.hasOwnProperty.call(value, key)) {
-                    throw new Error(`Missing required preference field: ${key}`);
+                if (!Object.prototype.hasOwnProperty.call(value, key) || value[key] === "") {
+                    missingKeys.push(key);
                 }
             });
+
+            if (missingKeys.length > 0) {
+                console.error(`🚨 Missing or empty preference fields: ${missingKeys.join(", ")}`);
+                throw new Error(`Missing or empty preference fields: ${missingKeys.join(", ")}`);
+            }
 
             return true;
         }),
@@ -150,11 +206,9 @@ const preferencesValidations = [
             return true;
         }),
 
-
-
     check('preferences.interests')
         .custom(value => {
-            if (typeof value !== 'object' || value === null) {
+            if (!value || typeof value !== 'object') {
                 throw new Error('Interests must be a valid JSON object.');
             }
 
@@ -165,11 +219,7 @@ const preferencesValidations = [
                     throw new Error(`Invalid interest category: ${category}`);
                 }
 
-                const interestsArray = value[category];
-
-                if (!Array.isArray(interestsArray)) {
-                    throw new Error(`Interests in category '${category}' must be an array.`);
-                }
+                const interestsArray = Array.isArray(value[category]) ? value[category] : []; // Ensure it's always an array
 
                 totalInterests += interestsArray.length; // Count total interests
 
@@ -187,8 +237,6 @@ const preferencesValidations = [
 
             return true;
         }),
-
-
     check('preferences.zodiacSign')
         .custom(value => {
             if (!isValidEntry(value, constants.zodiacSigns)) {
@@ -264,13 +312,12 @@ const preferencesValidations = [
             return true;
         }),
 
-
-    // ⚽ **Flattened Favorite Sports Teams (Array)**
+    // 🌍 Favorite Places To Go (Array of values)
     check('preferences.favoriteSportsTeams')
-        .isArray()
+        .isArray().withMessage('Favorite sports teams must be an array.')
         .custom(value => {
             value.forEach(team => {
-                if (!isValidEntry(team, constants.sportsTeamsList)) { // Single list of all sports teams
+                if (!isValidEntry(team, constants.sportsTeams)) {
                     throw new Error(`Invalid sports team '${team}' selected.`);
                 }
             });
