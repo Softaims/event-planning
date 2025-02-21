@@ -1,6 +1,5 @@
 {
-    "sportsTeams": {
-        "NFL": [
+    "sportsTeams": [
             "Kansas City Chiefs",
             "Dallas Cowboys",
             "New England Patriots",
@@ -25,9 +24,7 @@
             "Detroit Lions",
             "Jacksonville Jaguars",
             "Houston Texans",
-            "Atlanta Falcons"
-        ],
-        "NBA": [
+            "Atlanta Falcons",
             "Los Angeles Lakers",
             "Golden State Warriors",
             "Brooklyn Nets",
@@ -52,9 +49,7 @@
             "Washington Wizards",
             "Detroit Pistons",
             "Oklahoma City Thunder",
-            "Utah Jazz"
-        ],
-        "NHL": [
+            "Utah Jazz",
             "Toronto Maple Leafs",
             "Montreal Canadiens",
             "Pittsburgh Penguins",
@@ -79,9 +74,7 @@
             "Nashville Predators",
             "Columbus Blue Jackets",
             "Detroit Red Wings",
-            "Anaheim Ducks"
-        ],
-        "MLB": [
+            "Anaheim Ducks",
             "New York Yankees",
             "Los Angeles Dodgers",
             "Boston Red Sox",
@@ -106,7 +99,6 @@
             "Colorado Rockies",
             "Detroit Tigers",
             "Miami Marlins",
-            "Oakland Athletics"
-        ]
-    }
+            "Oakland Athletics"   
+    ]
 }

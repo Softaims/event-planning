@@ -1,4 +1,5 @@
 const { check, body, validationResult } = require('express-validator');
+const { parsePhoneNumberFromString } = require('libphonenumber-js');
 const constants = require("../constants");
 
 const dns = require('dns');
@@ -55,22 +56,52 @@ const authValidations = {
             .trim(),
 
         check('phoneNumber')
-            .matches(/^\+?\d{10,15}$/).withMessage('Invalid phone number format. Must be 10-15 digits with an optional leading "+".'),
+            .not().isEmpty().withMessage('Phone number is required.')
+            .custom((value) => {
+                const phoneNumber = parsePhoneNumberFromString(value);
+                if (!phoneNumber || !phoneNumber.isValid()) {
+                    throw new Error('Invalid phone number format.');
+                }
+
+                // Restrict to Pakistan (+92), India (+91), USA (+1)
+                const allowedCountries = ['PK', 'IN', 'US'];
+                if (!allowedCountries.includes(phoneNumber.country)) {
+                    throw new Error('Only phone numbers from Pakistan (+92), India (+91), and USA (+1) are allowed.');
+                }
+
+                return true;
+            }),
 
         check('dob')
-            .not().isEmpty().withMessage('Date of Birth is required.')
-            .isISO8601().withMessage('Invalid date format (YYYY-MM-DD required).'),
+            .not().isEmpty().withMessage('Date of Birth is required.'),
 
         check('pronouns')
-            .optional()
+            .not().isEmpty().withMessage('Pronouns required.')
             .isIn(['he_him', 'she_her', 'they_them', 'other']).withMessage('Invalid pronoun selection.'),
 
         check('profileImage')
-            .optional()
-            .isURL().withMessage('Profile image must be a valid URL.')
+            .custom((_, { req }) => {
+                if (!req.file) {
+                    throw new Error('Profile image is required.');
+                }
+
+                const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+                if (!allowedMimeTypes.includes(req.file.mimetype)) {
+                    throw new Error('Profile image must be a valid image file (JPEG, PNG, JPG).');
+                }
+                return true;
+            }),
     ],
     login: [
-        check('phoneNumber').not().isEmpty().withMessage('Phone Number is required.'),
+        check('phoneNumber')
+        .not().isEmpty().withMessage('Phone Number is required.')
+        .custom((value) => {
+            const phoneNumber = parsePhoneNumberFromString(value);
+            if (!phoneNumber || !phoneNumber.isValid()) {
+                throw new Error('Invalid phone number format.');
+            }
+            return true;
+        }),
         check('password').not().isEmpty().withMessage('Password is required.'),
     ],
     forgotPassword: [
@@ -215,7 +246,7 @@ const preferencesValidations = [
         .isArray()
         .custom(value => {
             value.forEach(artist => {
-                if (!isValidEntry(artist, constants.musicians)) {
+                if (!isValidEntry(artist, constants.artists)) {
                     throw new Error(`Invalid favorite artist '${artist}' selected.`);
                 }
             });

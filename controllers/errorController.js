@@ -53,42 +53,42 @@ module.exports = (err, req, res, next) => {
                         message: "Authentication failed against database server."
                     });
                 case 'P2001':
-                    return res.status(404).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: `The record searched for in the where condition does not exist.`
                     });
                 case 'P2002':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'Unique constraint failed.'
                     });
                 case 'P2003':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'Foreign key constraint failed.'
                     });
                 case 'P2004':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'A constraint failed on the database.'
                     });
                 case 'P2005':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'The value stored in the database is invalid for the field\'s type.'
                     });
                 case 'P2006':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'The provided value for the field is not valid.'
                     });
                 case 'P2007':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'Data validation error.'
                     });
                 case 'P2015':
-                    return res.status(400).json({
+                    return res.status(401).json({
                         status: 'fail',
                         message: 'A related record could not be found.'
                     });

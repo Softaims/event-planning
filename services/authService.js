@@ -18,7 +18,7 @@ const verifyToken = async (token) => {
 };
 
 // Create JWT and Send Response
-const createSendToken = async (res, user, statusCode, isSignup = false) => {
+const createSendToken = async (res, user, statusCode, isSignup = false, message = "") => {
     let token = signToken(user);
 
     // Setup cookie options
@@ -44,8 +44,11 @@ const createSendToken = async (res, user, statusCode, isSignup = false) => {
 
     res.status(statusCode).json({
         status: 'success',
-        token,
-        data: { user: userDto(user) },
+        message,
+        data: {
+            token, 
+            user: userDto(user)
+        },
     });
 };
 
@@ -111,15 +114,17 @@ const generateEmailVerificationToken = async (user) => {
 };
 
 const sendPhoneVerification = async (userId, phoneNumber) => {
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const verificationCode = crypto.randomInt(100000, 999999).toString(); 
     // Hash the code before storing in the database for security
     const hashedCode = hashToken(verificationCode);
+    const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
 
     // Save OTP and expiration in the database
     await prisma.user.update({
         where: { id: userId },
         data: {
-            phoneVerificationToken: hashedCode
+            phoneVerificationToken: hashedCode,
+            phoneVerificationTokenExpires: expiryTime,
         }
     });
 
@@ -167,6 +172,7 @@ const verifyAccount = async (user) => {
         data: {
             phoneVerified: true,
             phoneVerificationToken: null,
+            phoneVerificationTokenExpires: null,
         },
     });
 };

@@ -33,6 +33,7 @@ model User {
   phoneNumber             String    @unique
   phoneVerified           Boolean   @default(false)  // New field
   phoneVerificationToken  String?   // New field for OTP
+  phoneVerificationTokenExpires DateTime?
   dob       DateTime
   pronouns  Pronouns?
   profileImage String?  
