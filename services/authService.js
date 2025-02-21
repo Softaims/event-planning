@@ -113,11 +113,12 @@ const generateEmailVerificationToken = async (user) => {
     return verifyEmailCode; // Return the plain 6-digit code for sending via email
 };
 
-const sendPhoneVerification = async (userId, phoneNumber) => {
+const sendPhoneVerification = async (userId) => {
     const verificationCode = crypto.randomInt(100000, 999999).toString(); 
     // Hash the code before storing in the database for security
     const hashedCode = hashToken(verificationCode);
-    const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+    const expiryTime = new Date();
+    expiryTime.setUTCMinutes(expiryTime.getUTCMinutes() + 10);
 
     // Save OTP and expiration in the database
     await prisma.user.update({
@@ -167,7 +168,7 @@ const resetPassword = async (user, newPassword) => {
 };
 
 const verifyAccount = async (user) => {
-    await prisma.user.update({
+    return await prisma.user.update({
         where: { id: user.id },
         data: {
             phoneVerified: true,
