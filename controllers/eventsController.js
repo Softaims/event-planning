@@ -1,4 +1,3 @@
-// controllers/eventController.js
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
@@ -9,11 +8,10 @@ const eventService = require("../services/eventService");
 // Get events list (Ticketmaster)
 exports.getEvents = catchAsync(async (req, res, next) => {
   try {
-    const {
+    let {
       query,
       placeCategory,
       city = "",
-      countryCode = "",
       eventCategory = "",
       size = 10,
       page = 0,
@@ -22,11 +20,11 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       radius,
     } = req.query;
 
+
     const events = await eventService.fetchTicketmasterEvents({
       query,
       placeCategory,
       city,
-      countryCode,
       eventCategory,
       size,
       page,
@@ -66,11 +64,10 @@ exports.getEventById = catchAsync(async (req, res, next) => {
 // Get places (Google Places)
 exports.getPlaces = catchAsync(async (req, res, next) => {
   try {
-    const {
+    let {
       query,
       placeCategory,
       city = "",
-      countryCode = "",
       size = 10,
       latitude,
       longitude,

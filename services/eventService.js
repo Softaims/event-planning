@@ -1,6 +1,13 @@
 const axios = require("axios");
 const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
+const stopword = require("stopword");
+
+// Function to remove stop words
+const filterQuery = (query) => {
+  if (!query) return "";
+  return stopword.removeStopwords(query.split(" ")).join(" ");
+};
 
 const GOOGLE_PLACES_URL =
   "https://maps.googleapis.com/maps/api/place/textsearch/json";
@@ -19,10 +26,12 @@ exports.fetchTicketmasterEvents = async ({
   radius,
 }) => {
   try {
-    const keywords = query ? query.split(",").join(" OR ") : "";
+    const filteredQuery = filterQuery(query);
+
+    const keywords = filteredQuery ? filteredQuery.split(",").join(" OR ") : "";
     const categories = eventCategory ? eventCategory.split(",").join(",") : "";
     const combinedKeywords = placeCategory
-      ? `${keywords} ${placeCategory.split(",").join(" OR ")}`
+      ? ` ${placeCategory.split(",").join(" OR ")}`
       : keywords;
 
     const response = await axios.get(TICKET_MASTER_URL, {
