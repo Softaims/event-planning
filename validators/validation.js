@@ -1,22 +1,13 @@
-const { check, body, validationResult } = require('express-validator');
+const { check } = require('express-validator');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
 const constants = require("../constants");
-
-const dns = require('dns');
+const emailValidator = require('email-validator');
 
 const isValidEntry = (value, list) => {
-    return list.map(item => item.toLowerCase()).includes(value.toLowerCase());
+    if (!Array.isArray(list)) return false; // Ensure list is an array
+    return list.map(item => item.toLowerCase().trim()).includes(value.toLowerCase().trim());
 };
 
-const emailDomainIsValid = (email) => {
-    return new Promise((resolve, reject) => {
-        const domain = email.split('@')[1];
-        dns.resolveMx(domain, (err, addresses) => {
-            if (err) reject(err);
-            resolve(addresses && addresses.length > 0);
-        });
-    });
-};
 
 // Auth Validations
 const authValidations = {
@@ -25,9 +16,9 @@ const authValidations = {
             .isEmail().withMessage('Please provide a valid email address.')
             .bail()
             .custom(async (email) => {
-                const isValidDomain = await emailDomainIsValid(email);
-                if (!isValidDomain) {
-                    throw new Error('Email domain has no MX records, thus cannot receive emails.');
+                // 1️⃣ Check if the email is valid using email-validator
+                if (!emailValidator.validate(email)) {
+                    throw new Error('Invalid email format.');
                 }
                 return true;
             }),
@@ -91,21 +82,24 @@ const authValidations = {
                 }
                 return true;
             }),
+
+        check('lat')
+            .optional()
+            .isFloat({ min: -90, max: 90 })
+            .withMessage('Invalid latitude value.'),
+
+        check('long')
+            .optional()
+            .isFloat({ min: -180, max: 180 })
+            .withMessage('Invalid longitude value.'),
     ],
     login: [
         check('phoneNumber')
-        .not().isEmpty().withMessage('Phone Number is required.')
-        .custom((value) => {
-            const phoneNumber = parsePhoneNumberFromString(value);
-            if (!phoneNumber || !phoneNumber.isValid()) {
-                throw new Error('Invalid phone number format.');
-            }
-            return true;
-        }),
+            .not().isEmpty().withMessage('Phone Number is required.'),
         check('password').not().isEmpty().withMessage('Password is required.'),
     ],
     forgotPassword: [
-        check('phoneNumber').isEmail().withMessage('Please provide a valid phone number.'),
+        check('phoneNumber').not().isEmpty().withMessage('Phone Number is required.'),
     ],
     resetPassword: [
         check('password')
@@ -127,24 +121,84 @@ const authValidations = {
 // Add other validations if needed
 const userValidations = {
     updateProfile: [
-        check('name').not().isEmpty().withMessage('Name is required.'),
-        // Other checks for profile update can be added here
+        check('firstName').optional().trim().notEmpty().withMessage('First Name cannot be empty.'),
+        check('lastName').optional().trim().notEmpty().withMessage('Last Name cannot be empty.'),
+        check('email')
+            .optional()
+            .isEmail().withMessage('Please provide a valid email address.')
+            .bail()
+            .custom(async (email) => {
+                // 1️⃣ Check if the email is valid using email-validator
+                if (!emailValidator.validate(email)) {
+                    throw new Error('Invalid email format.');
+                }
+                return true;
+            }),
+        check('dob')
+            .optional()
+            .not().isEmpty().withMessage('Date of Birth is required.'),
+        check('pronouns')
+            .optional()
+            .isIn(['he_him', 'she_her', 'they_them', 'other'])
+            .withMessage('Invalid pronoun selection.'),
+        check('lat')
+            .optional()
+            .isFloat({ min: -90, max: 90 })
+            .withMessage('Invalid latitude value.'),
+        check('long')
+            .optional()
+            .isFloat({ min: -180, max: 180 })
+            .withMessage('Invalid longitude value.'),
+        check('profileImage')
+            .optional()
+            .custom((_, { req }) => {
+                if (!req.file) {
+                    throw new Error('Profile image is required.');
+                }
+
+                const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+                if (!allowedMimeTypes.includes(req.file.mimetype)) {
+                    throw new Error('Profile image must be a valid image file (JPEG, PNG, JPG).');
+                }
+                return true;
+            }),
     ],
 };
 
 const preferencesValidations = [
     check('preferences')
-        .exists()
-        .withMessage('Preferences JSON is required.')
+        .exists().withMessage('Preferences JSON is required.')
         .custom(value => {
-            if (typeof value !== 'object') {
+            if (typeof value !== 'object' || value === null) {
                 throw new Error('Preferences must be a valid JSON object.');
             }
+
+            // Required preference fields
+            const requiredKeys = [
+                "bio", "major", "college", "interests",
+                "musicGenre", "zodiacSign", "socialLinks",
+                "collegeClubs", "favoriteShows", "graduatingYear",
+                "favoriteArtists", "favoritePlacesToGo", "relationshipStatus",
+                "favoriteSportsTeams"
+            ];
+
+            const missingKeys = [];
+
+            requiredKeys.forEach(key => {
+                if (!Object.prototype.hasOwnProperty.call(value, key) || value[key] === "") {
+                    missingKeys.push(key);
+                }
+            });
+
+            if (missingKeys.length > 0) {
+                console.error(`🚨 Missing or empty preference fields: ${missingKeys.join(", ")}`);
+                throw new Error(`Missing or empty preference fields: ${missingKeys.join(", ")}`);
+            }
+
             return true;
         }),
 
     check('preferences.musicGenre')
-        .optional()
         .custom(value => {
             if (!isValidEntry(value, constants.musicGenres)) {
                 throw new Error('Invalid genre selected.');
@@ -152,28 +206,23 @@ const preferencesValidations = [
             return true;
         }),
 
-
     check('preferences.interests')
-        .optional()
         .custom(value => {
-            if (typeof value !== 'object' || value === null) {
+            if (!value || typeof value !== 'object') {
                 throw new Error('Interests must be a valid JSON object.');
             }
 
-            // Ensure all categories exist in constants and each contains an array
-            Object.keys(value).forEach(category => {
+            let totalInterests = 0; // Counter for total selected interests
 
+            Object.keys(value).forEach(category => {
                 if (!constants.interests.hasOwnProperty(category)) {
                     throw new Error(`Invalid interest category: ${category}`);
                 }
 
-                const interestsArray = value[category];
+                const interestsArray = Array.isArray(value[category]) ? value[category] : []; // Ensure it's always an array
 
-                if (!Array.isArray(interestsArray)) {
-                    throw new Error(`Interests in category '${category}' must be an array.`);
-                }
+                totalInterests += interestsArray.length; // Count total interests
 
-                // Validate each interest inside the category
                 interestsArray.forEach(interest => {
                     if (!constants.interests[category].includes(interest)) {
                         throw new Error(`Invalid interest '${interest}' in category '${category}'`);
@@ -181,11 +230,14 @@ const preferencesValidations = [
                 });
             });
 
+            // ✅ Ensure total interests across all categories is **maximum 3**
+            if (totalInterests > 3) {
+                throw new Error(`You can select a maximum of 3 interests across all categories.`);
+            }
+
             return true;
         }),
-
     check('preferences.zodiacSign')
-        .optional()
         .custom(value => {
             if (!isValidEntry(value, constants.zodiacSigns)) {
                 throw new Error('Invalid Zodiac Sign selected.');
@@ -194,7 +246,6 @@ const preferencesValidations = [
         }),
 
     check('preferences.college')
-        .optional()
         .custom(value => {
             if (!isValidEntry(value, constants.colleges)) {
                 throw new Error('Invalid college selected.');
@@ -204,7 +255,6 @@ const preferencesValidations = [
 
 
     check('preferences.major')
-        .optional()
         .custom(value => {
             if (!isValidEntry(value, constants.majors)) {
                 throw new Error('Invalid major selected.');
@@ -213,12 +263,10 @@ const preferencesValidations = [
         }),
 
     check('preferences.graduatingYear')
-        .optional()
         .isInt({ min: 1970, max: new Date().getFullYear() + 10 })
         .withMessage(`Graduating year must be between 1970 and ${new Date().getFullYear() + 10}`),
 
     check('preferences.collegeClubs')
-        .optional()
         .isArray()
         .custom(value => {
             value.forEach(club => {
@@ -231,7 +279,6 @@ const preferencesValidations = [
 
 
     check('preferences.relationshipStatus')
-        .optional()
         .isString().withMessage('Relationship status must be a string.')
         .custom(value => {
             if (!isValidEntry(value, constants.relationshipStatus)) {
@@ -242,7 +289,6 @@ const preferencesValidations = [
 
     // 🎶 Favorite Artists (Array of values)
     check('preferences.favoriteArtists')
-        .optional()
         .isArray()
         .custom(value => {
             value.forEach(artist => {
@@ -256,7 +302,6 @@ const preferencesValidations = [
 
     // 📺 Favorite TV Shows (Array of values)
     check('preferences.favoriteShows')
-        .optional()
         .isArray()
         .custom(value => {
             value.forEach(show => {
@@ -267,27 +312,20 @@ const preferencesValidations = [
             return true;
         }),
 
-
-    // ⚽ Favorite Sports Teams (Multiple categories)
+    // 🌍 Favorite Places To Go (Array of values)
     check('preferences.favoriteSportsTeams')
-        .optional()
+        .isArray().withMessage('Favorite sports teams must be an array.')
         .custom(value => {
-            Object.keys(value).forEach(category => {
-                if (!constants.sportsTeams.hasOwnProperty(category)) {
-                    throw new Error(`Invalid sports category: ${category}`);
+            value.forEach(team => {
+                if (!isValidEntry(team, constants.sportsTeams)) {
+                    throw new Error(`Invalid sports team '${team}' selected.`);
                 }
-                value[category].forEach(team => {
-                    if (!isValidEntry(team, constants.sportsTeams[category])) {
-                        throw new Error(`Invalid team '${team}' in category '${category}'`);
-                    }
-                });
             });
             return true;
         }),
 
     // 🌍 Favorite Places To Go (Array of values)
     check('preferences.favoritePlacesToGo')
-        .optional()
         .isArray()
         .custom(value => {
             value.forEach(place => {
@@ -299,7 +337,6 @@ const preferencesValidations = [
         }),
 
     check('preferences.socialLinks')
-        .optional()
         .custom(value => {
             const allowedPlatforms = ['Facebook', 'LinkedIn', 'Instagram', 'Twitter', 'Snapchat'];
             Object.keys(value).forEach(platform => {
@@ -315,7 +352,6 @@ const preferencesValidations = [
 
 
     check('preferences.bio')
-        .optional()
         .isLength({ max: 160 })
         .withMessage('Bio cannot exceed 160 characters.')
 ];
