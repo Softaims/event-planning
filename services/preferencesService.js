@@ -2,17 +2,17 @@ const { prisma } = require('../db');
 const AppError = require('../utils/appError');
 
 // Update User Preferences
-exports.updatePreferences = async (userId, preferences) => {
-    let userPreferences = await prisma.userPreferences.findUnique({ where: { userId } });
+exports.updatePreferences = async (id, preferences) => {
+    let userPreferences = await prisma.user.findUnique({ where: { id } });
 
     if (userPreferences) {
-        userPreferences = await prisma.userPreferences.update({
-            where: { userId },
+        userPreferences = await prisma.user.update({
+            where: { id },
             data: { preferences },
         });
     } else {
-        userPreferences = await prisma.userPreferences.create({
-            data: { userId, preferences },
+        userPreferences = await prisma.user.create({
+            data: { id, preferences },
         });
     }
 
@@ -20,8 +20,8 @@ exports.updatePreferences = async (userId, preferences) => {
 };
 
 // Get User Preferences
-exports.getPreferences = async (userId) => {
-    const preferences = await prisma.userPreferences.findUnique({ where: { userId } });
+exports.getPreferences = async (id) => {
+    const preferences = await prisma.user.findUnique({ where: { id } });
 
     if (!preferences) {
         throw new AppError('Preferences not found', 404);

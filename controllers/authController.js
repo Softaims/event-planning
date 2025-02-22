@@ -1,4 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const authService = require('../services/authService');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
@@ -6,20 +9,30 @@ const logger = require('../utils/logger');
 const { prisma } = require('../db');
 const twilioService = require('../utils/twilioService');
 const s3Service = require("../utils/s3Service");
+const { getDefaultPreferences } = require('../utils/preferencesHelper');
+
 
 exports.register = catchAsync(async (req, res, next) => {
-    let { email, password, firstName, lastName, phoneNumber, dob, pronouns } = req.body;
+    let { email, password, firstName, lastName, phoneNumber, dob, pronouns, lat, long } = req.body;
     dob = new Date(dob)
+
+    lat = lat ? parseFloat(lat) : null;
+    long = long ? parseFloat(long) : null;
+
+    if (isNaN(lat) || isNaN(long)) {
+        return next(new AppError('Invalid latitude or longitude format.', 400));
+    }
 
     // Check if phone already exists
     const existingUser = await authService.findUserByPhone(phoneNumber);
     if (existingUser) {
         if (!existingUser.phoneVerified) {
             // 🟢 User exists but not verified → Resend OTP and return success response
-            const verificationCode = await authService.sendPhoneVerification(existingUser.id, existingUser.phoneNumber);
+            const verificationCode = await authService.sendPhoneVerification(existingUser.id);
+            console.log("verificationCode : ", verificationCode)
 
             try {
-                await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
+                // await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
             } catch (err) {
                 logger.error(`Failed to resend verification code to: ${existingUser.phoneNumber}: ${err}`);
                 return next(new AppError('Failed to send verification code. Try again later.', 500));
@@ -42,14 +55,14 @@ exports.register = catchAsync(async (req, res, next) => {
     if (req.file) {
         const fileName = `${phoneNumber}.jpg`; // Name file uniquely with phone number
         const fileBuffer = req.file.buffer;
-    
+
         if (process.env.NODE_ENV === 'development') {
             // 🌍 Store locally in 'public/images/'
             const localDir = path.join(__dirname, '../public/images');
             if (!fs.existsSync(localDir)) {
                 fs.mkdirSync(localDir, { recursive: true });
             }
-    
+
             const localPath = path.join(localDir, fileName);
             fs.writeFileSync(localPath, fileBuffer);
             profileUrl = `/public/images/${fileName}`;
@@ -61,6 +74,9 @@ exports.register = catchAsync(async (req, res, next) => {
         }
     }
 
+    // Get Default Preferences
+    const defaultPreferences = getDefaultPreferences();
+
     // Register the user
     const newUser = await authService.registerUser({
         email,
@@ -71,14 +87,19 @@ exports.register = catchAsync(async (req, res, next) => {
         dob,
         pronouns,
         profileImage: profileUrl,
+        isRegistrationComplete: true,
+        preferences: defaultPreferences,
+        lat,
+        long
     });
 
     // Send OTP via Twilio
-    const verificationCode = await authService.sendPhoneVerification(newUser.id, newUser.phoneNumber);
+    const verificationCode = await authService.sendPhoneVerification(newUser.id);
+    console.log("verificationCode : ", verificationCode)
 
     try {
         // Send SMS via Twilio
-        await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
+        // await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
     } catch (err) {
         logger.error(`Failed to send verification code to: ${newUser.phoneNumber}`, err);
         // 🛑 **Delete the user if OTP fails**
@@ -87,7 +108,7 @@ exports.register = catchAsync(async (req, res, next) => {
     }
 
     // Send JWT token
-    authService.createSendToken(res, newUser, 201, isSignup = true, "Register Successfully! OTP sent for verification.");
+    authService.createSendToken(res, newUser, 200, isSignup = false, "Register Successfully! OTP sent for verification.");
 
     logger.info(`User registered: ${newUser.phoneNumber}`);
 });
@@ -112,17 +133,15 @@ exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
         },
     });
 
+    console.log("user : ", user)
+
     if (!user) {
         return next(new AppError('Invalid or expired OTP.', 401));
     }
 
     // Mark email as verified and remove OTP
-    await authService.verifyAccount(user);
-
-    res.status(200).json({
-        status: "success",
-        message: "Phone Number verified successfully! You can now log in."
-    });
+    const updatedUser = await authService.verifyAccount(user);
+    authService.createSendToken(res, updatedUser, 200, isSignup = false, "Phone Number verified successfully!");
 });
 
 exports.resendVerificationCode = catchAsync(async (req, res, next) => {
@@ -151,13 +170,14 @@ exports.resendVerificationCode = catchAsync(async (req, res, next) => {
     }
 
     // Send OTP via Twilio
-    const verificationCode = await authService.sendPhoneVerification(user.id, user.phoneNumber);
+    const verificationCode = await authService.sendPhoneVerification(user.id);
+    console.log("verificationCode: ", verificationCode)
 
     try {
         // Send SMS via Twilio
-        await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        // await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
         logger.info(`Verification code resent to: ${user.phoneNumber}`);
-        res.status(200).json({ status: 'success', message: 'Verification code resent successfully!' });
+        authService.createSendToken(res, user, 200, isSignup = false, 'Verification code resent successfully!');
     } catch (err) {
         logger.error(`Failed to resend verification code to: ${user.phoneNumber}`, err);
         // Remove expired token to allow retry
@@ -183,7 +203,7 @@ exports.login = catchAsync(async (req, res, next) => {
         return next(new AppError('Please verify your phone number.', 401));
     }
 
-    authService.createSendToken(res, user, 200);
+    authService.createSendToken(res, user, 200, isSignup = false, message = "Login Successfully!");
 });
 
 exports.logout = catchAsync(async (req, res, next) => {
@@ -212,19 +232,27 @@ exports.logout = catchAsync(async (req, res, next) => {
 exports.forgotPassword = catchAsync(async (req, res, next) => {
     const { phoneNumber } = req.body;
 
-    // 1) Get user based on email
+    // 1) Get user based on phone number
     const user = await authService.findUserByPhone(phoneNumber);
     if (!user) {
         logger.error(`Password reset requested for non-existent phone number: ${phoneNumber}`);
         return next(new AppError('No user found with this phone number.', 401));
     }
 
-    // 2) Generate a 6-digit numeric OTP
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedToken = authService.hashToken(resetToken);
-    const expiryTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiry
+    // 2) Check if the existing OTP is still valid
+    if (user.passwordResetToken && user.passwordResetExpires > new Date()) {
+        return next(new AppError('A password reset code was already sent. Please wait before requesting a new one.', 401));
+    }
 
-    // 3) Save OTP in database
+    // 3) Generate a 6-digit numeric OTP
+    const resetToken = crypto.randomInt(100000, 999999).toString(); 
+    console.log("Generated OTP:", resetToken);
+    const hashedToken = authService.hashToken(resetToken);
+    
+    const expiryTime = new Date();
+    expiryTime.setUTCMinutes(expiryTime.getUTCMinutes() + 10);
+
+    // 4) Save OTP in the database
     await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -233,11 +261,11 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
         },
     });
 
-
     try {
         // Send SMS via Twilio
-        await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        // await twilioService.sendVerificationCode(user.phoneNumber, resetToken);
         logger.info(`Password reset OTP sent to: ${user.phoneNumber}`);
+
         res.status(200).json({
             status: 'success',
             message: 'Password reset OTP sent to your phone number!',
@@ -245,12 +273,12 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     } catch (err) {
         logger.error(`Error sending password reset code to: ${user.phoneNumber}`, err);
 
-        // If email fails, remove OTP from database
+        // If sending OTP fails, remove it from the database
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 passwordResetToken: null,
-                passwordResetExpires: null
+                passwordResetExpires: null,
             },
         });
 

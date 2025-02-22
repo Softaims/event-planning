@@ -1,3 +1,5 @@
+// const { preferencesValidations } = require("../validators/validation");
+
 const userDto = (user) => {
     return {
         id: user.id,
@@ -5,14 +7,19 @@ const userDto = (user) => {
         firstName: user.firstName,
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
-        dob: user.dob,
+        dob: user.dob.toISOString().split('T')[0],
         pronouns: user.pronouns,
         profileImage: user.profileImage,
-        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
         active: user.active,
         role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        isRegistrationComplete: user.isRegistrationComplete,
+        lat: user.lat,
+        long: user.long,
+        location: user.location,
+        preferences: user.preferences
     };
 };
 
