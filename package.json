@@ -43,7 +43,9 @@
     "uuid": "^11.1.0",
     "validator": "^13.12.0",
     "winston": "^3.13.0",
-    "xss-clean": "^0.1.4"
+    "xss-clean": "^0.1.4",
+    "nodemon": "^3.1.9",
+    "stopword": "^3.1.4"
   },
   "devDependencies": {
     "prisma": "^6.3.1"
