@@ -55,7 +55,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
 
     const mergedResults = [
       ...events.map((event) => ({ ...eventDto(event) })),
-      ...eventsFromDb.map((event) => ({ ...dbEventDto(event) })),
+      // ...eventsFromDb.map((event) => ({ ...dbEventDto(event) })),
       ...places.map((place) => ({ ...placeDto(place) })),
     ];
 
