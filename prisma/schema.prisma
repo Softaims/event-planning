@@ -47,7 +47,7 @@ model EventAttendance {
   createdAt  DateTime @default(now())
   status     AttendanceStatus @default(GOING)
   user       User     @relation(fields: [userId], references: [id])
-  @@unique([eventId, userId]) // Ensure a user can only mark attendance once per event
+  @@unique([eventId, userId]) 
 }
 
 model Event {
@@ -64,8 +64,8 @@ model Event {
   preferences  Json? 
   createdAt    DateTime @default(now()) 
   updatedAt    DateTime @updatedAt
-  createdBy    User     @relation("EventCreatedBy", fields: [userId], references: [id]) // New field
-  userId       Int      // Foreign key for user
+  createdBy    User     @relation("EventCreatedBy", fields: [userId], references: [id]) 
+  userId       Int      
 }
 
 
