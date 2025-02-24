@@ -114,7 +114,7 @@ const generateEmailVerificationToken = async (user) => {
 };
 
 const sendPhoneVerification = async (userId) => {
-    const verificationCode = crypto.randomInt(100000, 999999).toString(); 
+    const verificationCode = process.env.NODE_ENV === "development" ? "111111" : crypto.randomInt(100000, 999999).toString();
     // Hash the code before storing in the database for security
     const hashedCode = hashToken(verificationCode);
     const expiryTime = new Date();

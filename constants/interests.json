@@ -8,14 +8,16 @@
             "Anime",
             "Reading",
             "Writing",
-            "DIY/Crafts"
+            "DIY/Crafts",
+        ""
         ],
         "foodDrink": [
             "Cooking",
             "Foodie",
             "Coffee Enthusiast",
             "Wine Tasting",
-            "Brunch Culture"
+            "Brunch Culture",
+        ""
         ],
         "fitnessWellness": [
             "Fitness",
@@ -26,7 +28,8 @@
             "Volleyball",
             "Pickleball",
             "Church",
-            "Dance"
+            "Dance",
+        ""
         ],
         "sportsGaming": [
             "Basketball",
@@ -36,14 +39,16 @@
             "Soccer",
             "Wrestling",
             "Sports Betting",
-            "Video Games"
+            "Video Games",
+        ""
         ],
         "lifestyleFashion": [
             "Streetwear",
             "Makeup",
             "Travel",
             "Astrology",
-            "Thrifting"
+            "Thrifting",
+        ""
         ],
         "outdoorAdventure": [
             "Snowboarding",
@@ -51,18 +56,21 @@
             "Fishing",
             "Golf",
             "Hiking",
-            "Camping"
+            "Camping",
+        ""
         ],
         "nightlifeMusic": [
             "Live Music",
             "Bar Hoping",
             "Clubbing",
-            "Festival Culture"
+            "Festival Culture",
+        ""
         ],
         "techDigital": [
             "Coding",
             "Crypto/NFTs",
-            "Startups"
+            "Startups",
+        ""
         ]
     }
 }

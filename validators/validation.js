@@ -5,6 +5,8 @@ const emailValidator = require("email-validator");
 
 const isValidEntry = (value, list) => {
   if (!Array.isArray(list)) return false; // Ensure list is an array
+  if (!value || typeof value !== "string" || value.trim() === "") return true; // Allow empty string or null as valid input
+
   return list
     .map((item) => item.toLowerCase().trim())
     .includes(value.toLowerCase().trim());
@@ -204,62 +206,59 @@ const userValidations = {
 
 const preferencesValidations = [
   check("preferences")
-    .exists()
-    .withMessage("Preferences JSON is required.")
-    .custom((value) => {
-      if (typeof value !== "object" || value === null) {
-        throw new Error("Preferences must be a valid JSON object.");
+  .exists()
+  .withMessage("Preferences JSON is required.")
+  .custom((value) => {
+    if (typeof value !== "object" || value === null) {
+      throw new Error("Preferences must be a valid JSON object.");
+    }
+
+    // Required preference fields
+    const requiredKeys = [
+      "bio",
+      "major",
+      "college",
+      "interests",
+      "musicGenre",
+      "zodiacSign",
+      "socialLinks",
+      "collegeClubs",
+      "favoriteShows",
+      "graduatingYear",
+      "favoriteArtists",
+      "favoritePlacesToGo",
+      "relationshipStatus",
+      "favoriteSportsTeams",
+    ];
+
+    const missingKeys = [];
+
+    requiredKeys.forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) {
+        missingKeys.push(key); // 🔴 Only add missing keys (don't check empty values)
       }
+    });
 
-      // Required preference fields
-      const requiredKeys = [
-        "bio",
-        "major",
-        "college",
-        "interests",
-        "musicGenre",
-        "zodiacSign",
-        "socialLinks",
-        "collegeClubs",
-        "favoriteShows",
-        "graduatingYear",
-        "favoriteArtists",
-        "favoritePlacesToGo",
-        "relationshipStatus",
-        "favoriteSportsTeams",
-      ];
+    if (missingKeys.length > 0) {
+      console.error(
+        `🚨 Missing preference fields: ${missingKeys.join(", ")}`
+      );
+      throw new Error(
+        `Missing preference fields: ${missingKeys.join(", ")}`
+      );
+    }
 
-      const missingKeys = [];
+    return true;
+  }),
 
-      requiredKeys.forEach((key) => {
-        if (
-          !Object.prototype.hasOwnProperty.call(value, key) ||
-          value[key] === ""
-        ) {
-          missingKeys.push(key);
-        }
-      });
-
-      if (missingKeys.length > 0) {
-        console.error(
-          `🚨 Missing or empty preference fields: ${missingKeys.join(", ")}`
-        );
-        throw new Error(
-          `Missing or empty preference fields: ${missingKeys.join(", ")}`
-        );
-      }
-
-      return true;
-    }),
-
-  check("preferences.musicGenre").custom((value) => {
+  check("preferences.musicGenre").optional().custom((value) => {
     if (!isValidEntry(value, constants.musicGenres)) {
       throw new Error("Invalid genre selected.");
     }
     return true;
   }),
 
-  check("preferences.interests").custom((value) => {
+  check("preferences.interests").optional().custom((value) => {
     if (!value || typeof value !== "object") {
       throw new Error("Interests must be a valid JSON object.");
     }
@@ -295,21 +294,21 @@ const preferencesValidations = [
 
     return true;
   }),
-  check("preferences.zodiacSign").custom((value) => {
+  check("preferences.zodiacSign").optional().custom((value) => {
     if (!isValidEntry(value, constants.zodiacSigns)) {
       throw new Error("Invalid Zodiac Sign selected.");
     }
     return true;
   }),
 
-  check("preferences.college").custom((value) => {
+  check("preferences.college").optional().custom((value) => {
     if (!isValidEntry(value, constants.colleges)) {
       throw new Error("Invalid college selected.");
     }
     return true;
   }),
 
-  check("preferences.major").custom((value) => {
+  check("preferences.major").optional().custom((value) => {
     if (!isValidEntry(value, constants.majors)) {
       throw new Error("Invalid major selected.");
     }
@@ -317,14 +316,23 @@ const preferencesValidations = [
   }),
 
   check("preferences.graduatingYear")
-    .isInt({ min: 1970, max: new Date().getFullYear() + 10 })
-    .withMessage(
-      `Graduating year must be between 1970 and ${
-        new Date().getFullYear() + 10
-      }`
-    ),
+  .optional()
+  .custom((value) => {
+    if (value !== null && (typeof value !== "number" || isNaN(value))) {
+      throw new Error("Graduating year must be a valid number or null.");
+    }
+
+    if (value !== null && (value < 1970 || value > new Date().getFullYear() + 10)) {
+      throw new Error(
+        `Graduating year must be between 1970 and ${new Date().getFullYear() + 10}`
+      );
+    }
+
+    return true;
+  }),
 
   check("preferences.collegeClubs")
+  .optional()
     .isArray()
     .custom((value) => {
       value.forEach((club) => {
@@ -336,6 +344,7 @@ const preferencesValidations = [
     }),
 
   check("preferences.relationshipStatus")
+  .optional()
     .isString()
     .withMessage("Relationship status must be a string.")
     .custom((value) => {
@@ -347,6 +356,7 @@ const preferencesValidations = [
 
   // 🎶 Favorite Artists (Array of values)
   check("preferences.favoriteArtists")
+  .optional()
     .isArray()
     .custom((value) => {
       value.forEach((artist) => {
@@ -359,6 +369,7 @@ const preferencesValidations = [
 
   // 📺 Favorite TV Shows (Array of values)
   check("preferences.favoriteShows")
+  .optional()
     .isArray()
     .custom((value) => {
       value.forEach((show) => {
@@ -371,6 +382,7 @@ const preferencesValidations = [
 
   // 🌍 Favorite Places To Go (Array of values)
   check("preferences.favoriteSportsTeams")
+  .optional()
     .isArray()
     .withMessage("Favorite sports teams must be an array.")
     .custom((value) => {
@@ -384,6 +396,7 @@ const preferencesValidations = [
 
   // 🌍 Favorite Places To Go (Array of values)
   check("preferences.favoritePlacesToGo")
+  .optional()
     .isArray()
     .custom((value) => {
       value.forEach((place) => {
@@ -394,7 +407,7 @@ const preferencesValidations = [
       return true;
     }),
 
-  check("preferences.socialLinks").custom((value) => {
+  check("preferences.socialLinks").optional().custom((value) => {
     const allowedPlatforms = [
       "Facebook",
       "LinkedIn",
@@ -414,6 +427,7 @@ const preferencesValidations = [
   }),
 
   check("preferences.bio")
+    .optional()
     .isLength({ max: 160 })
     .withMessage("Bio cannot exceed 160 characters."),
 ];
