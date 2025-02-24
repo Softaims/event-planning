@@ -1,5 +1,6 @@
 const catchAsync = require('../utils/catchAsync');
 const preferencesService = require('../services/preferencesService');
+const userDto = require('../dtos/userDto');
 
 // Update Preferences
 exports.updatePreferences = catchAsync(async (req, res, next) => {
@@ -12,7 +13,7 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Preferences updated successfully.',
-        data: { preferences: updatedPreferences.preferences },
+        data: { user: userDto(updatedPreferences) },
     });
 });
 
@@ -26,6 +27,6 @@ exports.getPreferences = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Preferences fetched successfully.',
-        data: { preferences: preferences.preferences },
+        data: { user: userDto(preferences) },
     });
 });

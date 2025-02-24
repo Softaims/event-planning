@@ -32,7 +32,9 @@ exports.register = catchAsync(async (req, res, next) => {
             console.log("verificationCode : ", verificationCode)
 
             try {
-                // await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
+                if (process.env.NODE_ENV !== 'development') {
+                    await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
+                }
             } catch (err) {
                 logger.error(`Failed to resend verification code to: ${existingUser.phoneNumber}: ${err}`);
                 return next(new AppError('Failed to send verification code. Try again later.', 500));
@@ -99,7 +101,9 @@ exports.register = catchAsync(async (req, res, next) => {
 
     try {
         // Send SMS via Twilio
-        // await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
+        if (process.env.NODE_ENV !== 'development') {
+            await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
+        }
     } catch (err) {
         logger.error(`Failed to send verification code to: ${newUser.phoneNumber}`, err);
         // 🛑 **Delete the user if OTP fails**
@@ -175,7 +179,9 @@ exports.resendVerificationCode = catchAsync(async (req, res, next) => {
 
     try {
         // Send SMS via Twilio
-        // await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        if (process.env.NODE_ENV !== 'development') {
+            await twilioService.sendVerificationCode(user.phoneNumber, verificationCode);
+        }
         logger.info(`Verification code resent to: ${user.phoneNumber}`);
         authService.createSendToken(res, user, 200, isSignup = false, 'Verification code resent successfully!');
     } catch (err) {
@@ -263,7 +269,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     try {
         // Send SMS via Twilio
-        // await twilioService.sendVerificationCode(user.phoneNumber, resetToken);
+        if (process.env.NODE_ENV !== 'development') {
+            await twilioService.sendVerificationCode(user.phoneNumber, resetToken);
+        }
         logger.info(`Password reset OTP sent to: ${user.phoneNumber}`);
 
         res.status(200).json({

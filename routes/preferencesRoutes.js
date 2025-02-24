@@ -4,9 +4,11 @@ const preferencesController = require('../controllers/preferencesController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const validationMiddleware = require('../middlewares/validationMiddleware');
 const { preferencesValidations } = require('../validators/validation');
+const {normalizePreferences} = require('../middlewares/normalizePreferencesMiddleware');
 
 router.post('/', 
     authMiddleware.protect, 
+    normalizePreferences,
     preferencesValidations, 
     validationMiddleware.validate, 
     preferencesController.updatePreferences
