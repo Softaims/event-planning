@@ -48,10 +48,10 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       }),
     ]);
 
-    const eventsFromDb = await eventService.getEvents({
-      page: parseInt(page, 10),
-      limit: parseInt(size, 10),
-    });
+    // const eventsFromDb = await eventService.getEvents({
+    //   page: parseInt(page, 10),
+    //   limit: parseInt(size, 10),
+    // });
 
     const mergedResults = [
       ...events.map((event) => ({ ...eventDto(event) })),
