@@ -3,17 +3,10 @@ const eventDto = (event) => {
     id: event.id,
     name: event.name,
     description: event.description,
-    dateTime: {
-      start: event.dates?.start?.dateTime,
-      end: event.dates?.end?.dateTime,
-    },
-    images: event.images || [],
-    location: {
-      name: event._embedded?.venues?.[0]?.name,
-      address: event._embedded?.venues?.[0]?.address?.line1,
-      city: event._embedded?.venues?.[0]?.city?.name,
-      country: event._embedded?.venues?.[0]?.country?.name,
-    },
+    dateTime: event.dates?.start?.dateTime,
+    // images: event.images || [],
+    source: "ticketmaster",
+    location: `${event._embedded?.venues?.[0]?.name}, ${event._embedded?.venues?.[0]?.address?.line1}, ${event._embedded?.venues?.[0]?.city?.name}, ${event._embedded?.venues?.[0]?.country?.name}`,
   };
 };
 

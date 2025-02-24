@@ -9,26 +9,6 @@ const GOOGLE_PLACES_URL =
 
 const TICKET_MASTER_URL = "https://app.ticketmaster.com/discovery/v2/events";
 
-const filterQuery = (query) => {
-  if (!query) return "";
-  if (Array.isArray(query)) {
-    return stopword.removeStopwords(query.map((word) => word.trim())).join(" ");
-  }
-  return stopword
-    .removeStopwords(query.split(",").map((word) => word.trim()))
-    .join(" ");
-};
-
-const formatMultipleParams = (param) => {
-  if (!param) return "";
-  return Array.isArray(param)
-    ? param.join("|")
-    : param
-        .split(",")
-        .map((p) => p.trim())
-        .join("|");
-};
-
 const calculateInterestMatch = (currentUserPrefs, attendeePrefs) => {
   if (!attendeePrefs.length) return 0;
 
@@ -76,6 +56,26 @@ const calculateInterestMatch = (currentUserPrefs, attendeePrefs) => {
   return Math.round(Math.min(averageMatch, 100));
 };
 
+const filterQuery = (query) => {
+  if (!query) return "";
+  if (Array.isArray(query)) {
+    return stopword.removeStopwords(query.map((word) => word.trim())).join(" ");
+  }
+  return stopword
+    .removeStopwords(query.split(",").map((word) => word.trim()))
+    .join(" ");
+};
+
+const formatMultipleParams = (param) => {
+  if (!param) return "";
+  return Array.isArray(param)
+    ? param.join("|")
+    : param
+        .split(",")
+        .map((p) => p.trim())
+        .join("|");
+};
+
 exports.fetchTicketmasterEvents = async ({
   query,
   placeCategory,
@@ -89,14 +89,16 @@ exports.fetchTicketmasterEvents = async ({
 }) => {
   try {
     const filteredQuery = filterQuery(query);
+    console.log("filteredQuery", filteredQuery);
     const formattedEventCategory = formatMultipleParams(eventCategory);
+    console.log("formattedEventCategory", formattedEventCategory);
     const formattedPlaceCategory = formatMultipleParams(placeCategory);
+    console.log("formattedPlaceCategory", formattedPlaceCategory);
     const response = await axios.get(TICKET_MASTER_URL, {
       params: {
         apikey: process.env.TICKETMASTER_API_KEY,
         city,
-        keyword: filteredQuery, // Ticketmaster's keyword filter
-        classificationName: formattedEventCategory, // Pass multiple categories
+        classificationName: formattedEventCategory,
         latlong: latitude && longitude ? `${latitude},${longitude}` : "",
         radius,
         size,
@@ -126,27 +128,22 @@ exports.fetchGooglePlaces = async ({
     if (!apiKey) {
       throw new AppError("Google Places API key is missing", 500);
     }
-
-    let url = `${GOOGLE_PLACES_URL}?key=${apiKey}&radius=${radius || 5000}`;
+    let url = `${GOOGLE_PLACES_URL}?key=${apiKey}`;
     if (query) url += `&query=${encodeURIComponent(query)}`;
+    if (city) {
+      url += ` in${encodeURIComponent(city)}`;
+    }
 
     if (latitude && longitude) {
-      url += `&location=${latitude},${longitude}`;
+      url += `&location=${latitude},${longitude}&radius=${radius || 5000}`;
     }
-
     if (placeCategory) url += `&type=${encodeURIComponent(placeCategory)}`;
 
-    if (city) {
-      url += `&query=${encodeURIComponent(city)}`;
-    }
-
-    logger.info(`Fetching Google Places data from URL: ${url}`);
-    console.log(url);
     const response = await axios.get(url);
 
     if (response.data.status !== "OK") {
       logger.error(`Google Places API error: ${response.data.status}`);
-      throw new AppError("Failed to fetch places from Google Places API", 500);
+      return [];
     }
 
     logger.info("Google Places API results:", response.data.results.length);
@@ -237,7 +234,6 @@ exports.markAttendance = async ({ eventId, userId, type, status }) => {
     });
   }
 };
-
 
 // Get stats about an event based on the current user preferences
 exports.getEventStats = async ({ eventId, userId }) => {
@@ -342,9 +338,6 @@ exports.getEventStats = async ({ eventId, userId }) => {
     interestMatchPercentage,
   };
 };
-
-
-
 
 exports.createEvent = async (eventData) => {
   const event = await prisma.event.create({

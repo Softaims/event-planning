@@ -4,12 +4,10 @@ const placeDto = (place) => {
   return {
     id: place.place_id,
     name: place.name,
-    address: place.formatted_address,
-    openNow: place.opening_hours ? place.opening_hours.open_now : false,
-    type: "place",
-    photos: place.photos,
-    rating: place.rating || null,
-    priceLevel: place.price_level || null,
+    description: place.description,
+    // images: place.photos || [],
+    source: "Google Places",
+    location: place.formatted_address,
   };
 };
 

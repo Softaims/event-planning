@@ -13,7 +13,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       city = "",
       eventCategory = "",
       size = 10,
-      page = 1,
+      page = 0,
       latitude,
       longitude,
       radius,
