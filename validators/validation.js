@@ -206,133 +206,146 @@ const userValidations = {
 
 const preferencesValidations = [
   check("preferences")
-  .exists()
-  .withMessage("Preferences JSON is required.")
-  .custom((value) => {
-    if (typeof value !== "object" || value === null) {
-      throw new Error("Preferences must be a valid JSON object.");
-    }
-
-    // Required preference fields
-    const requiredKeys = [
-      "bio",
-      "major",
-      "college",
-      "interests",
-      "musicGenre",
-      "zodiacSign",
-      "socialLinks",
-      "collegeClubs",
-      "favoriteShows",
-      "graduatingYear",
-      "favoriteArtists",
-      "favoritePlacesToGo",
-      "relationshipStatus",
-      "favoriteSportsTeams",
-    ];
-
-    const missingKeys = [];
-
-    requiredKeys.forEach((key) => {
-      if (!Object.prototype.hasOwnProperty.call(value, key)) {
-        missingKeys.push(key); // 🔴 Only add missing keys (don't check empty values)
-      }
-    });
-
-    if (missingKeys.length > 0) {
-      console.error(
-        `🚨 Missing preference fields: ${missingKeys.join(", ")}`
-      );
-      throw new Error(
-        `Missing preference fields: ${missingKeys.join(", ")}`
-      );
-    }
-
-    return true;
-  }),
-
-  check("preferences.musicGenre").optional().custom((value) => {
-    if (!isValidEntry(value, constants.musicGenres)) {
-      throw new Error("Invalid genre selected.");
-    }
-    return true;
-  }),
-
-  check("preferences.interests").optional().custom((value) => {
-    if (!value || typeof value !== "object") {
-      throw new Error("Interests must be a valid JSON object.");
-    }
-
-    let totalInterests = 0; // Counter for total selected interests
-
-    Object.keys(value).forEach((category) => {
-      if (!constants.interests.hasOwnProperty(category)) {
-        throw new Error(`Invalid interest category: ${category}`);
+    .exists()
+    .withMessage("Preferences JSON is required.")
+    .custom((value) => {
+      if (typeof value !== "object" || value === null) {
+        throw new Error("Preferences must be a valid JSON object.");
       }
 
-      const interestsArray = Array.isArray(value[category])
-        ? value[category]
-        : []; // Ensure it's always an array
+      // Required preference fields
+      const requiredKeys = [
+        "bio",
+        "major",
+        "college",
+        "interests",
+        "musicGenre",
+        "zodiacSign",
+        "socialLinks",
+        "collegeClubs",
+        "favoriteShows",
+        "graduatingYear",
+        "favoriteArtists",
+        "favoritePlacesToGo",
+        "relationshipStatus",
+        "favoriteSportsTeams",
+      ];
 
-      totalInterests += interestsArray.length; // Count total interests
+      const missingKeys = [];
 
-      interestsArray.forEach((interest) => {
-        if (!constants.interests[category].includes(interest)) {
-          throw new Error(
-            `Invalid interest '${interest}' in category '${category}'`
-          );
+      requiredKeys.forEach((key) => {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) {
+          missingKeys.push(key); // 🔴 Only add missing keys (don't check empty values)
         }
       });
-    });
 
-    // ✅ Ensure total interests across all categories is **maximum 3**
-    if (totalInterests > 3) {
-      throw new Error(
-        `You can select a maximum of 3 interests across all categories.`
-      );
-    }
+      if (missingKeys.length > 0) {
+        console.error(
+          `🚨 Missing preference fields: ${missingKeys.join(", ")}`
+        );
+        throw new Error(`Missing preference fields: ${missingKeys.join(", ")}`);
+      }
 
-    return true;
-  }),
-  check("preferences.zodiacSign").optional().custom((value) => {
-    if (!isValidEntry(value, constants.zodiacSigns)) {
-      throw new Error("Invalid Zodiac Sign selected.");
-    }
-    return true;
-  }),
+      return true;
+    }),
 
-  check("preferences.college").optional().custom((value) => {
-    if (!isValidEntry(value, constants.colleges)) {
-      throw new Error("Invalid college selected.");
-    }
-    return true;
-  }),
+  check("preferences.musicGenre")
+    .optional()
+    .custom((value) => {
+      if (!isValidEntry(value, constants.musicGenres)) {
+        throw new Error("Invalid genre selected.");
+      }
+      return true;
+    }),
 
-  check("preferences.major").optional().custom((value) => {
-    if (!isValidEntry(value, constants.majors)) {
-      throw new Error("Invalid major selected.");
-    }
-    return true;
-  }),
+  check("preferences.interests")
+    .optional()
+    .custom((value) => {
+      if (!value || typeof value !== "object") {
+        throw new Error("Interests must be a valid JSON object.");
+      }
+
+      let totalInterests = 0; // Counter for total selected interests
+
+      Object.keys(value).forEach((category) => {
+        if (!constants.interests.hasOwnProperty(category)) {
+          throw new Error(`Invalid interest category: ${category}`);
+        }
+
+        const interestsArray = Array.isArray(value[category])
+          ? value[category]
+          : []; // Ensure it's always an array
+
+        totalInterests += interestsArray.length; // Count total interests
+
+        interestsArray.forEach((interest) => {
+          if (!constants.interests[category].includes(interest)) {
+            throw new Error(
+              `Invalid interest '${interest}' in category '${category}'`
+            );
+          }
+        });
+      });
+
+      // ✅ Ensure total interests across all categories is **maximum 3**
+      if (totalInterests > 3) {
+        throw new Error(
+          `You can select a maximum of 3 interests across all categories.`
+        );
+      }
+
+      return true;
+    }),
+  check("preferences.zodiacSign")
+    .optional()
+    .custom((value) => {
+      if (!isValidEntry(value, constants.zodiacSigns)) {
+        throw new Error("Invalid Zodiac Sign selected.");
+      }
+      return true;
+    }),
+
+  check("preferences.college")
+    .optional()
+    .custom((value) => {
+      if (!isValidEntry(value, constants.colleges)) {
+        throw new Error("Invalid college selected.");
+      }
+      return true;
+    }),
+
+  check("preferences.major")
+    .optional()
+    .custom((value) => {
+      if (!isValidEntry(value, constants.majors)) {
+        throw new Error("Invalid major selected.");
+      }
+      return true;
+    }),
 
   check("preferences.graduatingYear")
-  .optional()
-  .custom((value) => {
-    if (value !== null && (typeof value !== "number" || isNaN(value))) {
-      throw new Error("Graduating year must be a valid number or null.");
-    }
+    .optional()
+    .custom((value) => {
+      if (value !== null && (typeof value !== "number" || isNaN(value))) {
+        throw new Error("Graduating year must be a valid number or null.");
+      }
 
-    if (value !== null && (value < 1970 || value > new Date().getFullYear() + 10)) {
-      throw new Error(
-        `Graduating year must be between 1970 and ${new Date().getFullYear() + 10}`
-      );
-    }
+      if (
+        value !== null &&
+        (value < 1970 || value > new Date().getFullYear() + 10)
+      ) {
+        throw new Error(
+          `Graduating year must be between 1970 and ${
+            new Date().getFullYear() + 10
+          }`
+        );
+      }
 
-    return true;
-  }),
+      return true;
+    }),
 
   check("preferences.collegeClubs")
-  .optional()
+    .optional()
     .isArray()
     .custom((value) => {
       value.forEach((club) => {
@@ -344,7 +357,7 @@ const preferencesValidations = [
     }),
 
   check("preferences.relationshipStatus")
-  .optional()
+    .optional()
     .isString()
     .withMessage("Relationship status must be a string.")
     .custom((value) => {
@@ -356,7 +369,7 @@ const preferencesValidations = [
 
   // 🎶 Favorite Artists (Array of values)
   check("preferences.favoriteArtists")
-  .optional()
+    .optional()
     .isArray()
     .custom((value) => {
       value.forEach((artist) => {
@@ -369,7 +382,7 @@ const preferencesValidations = [
 
   // 📺 Favorite TV Shows (Array of values)
   check("preferences.favoriteShows")
-  .optional()
+    .optional()
     .isArray()
     .custom((value) => {
       value.forEach((show) => {
@@ -382,7 +395,7 @@ const preferencesValidations = [
 
   // 🌍 Favorite Places To Go (Array of values)
   check("preferences.favoriteSportsTeams")
-  .optional()
+    .optional()
     .isArray()
     .withMessage("Favorite sports teams must be an array.")
     .custom((value) => {
@@ -396,7 +409,7 @@ const preferencesValidations = [
 
   // 🌍 Favorite Places To Go (Array of values)
   check("preferences.favoritePlacesToGo")
-  .optional()
+    .optional()
     .isArray()
     .custom((value) => {
       value.forEach((place) => {
@@ -407,24 +420,26 @@ const preferencesValidations = [
       return true;
     }),
 
-  check("preferences.socialLinks").optional().custom((value) => {
-    const allowedPlatforms = [
-      "Facebook",
-      "LinkedIn",
-      "Instagram",
-      "Twitter",
-      "Snapchat",
-    ];
-    Object.keys(value).forEach((platform) => {
-      if (!allowedPlatforms.includes(platform)) {
-        throw new Error(`Invalid social media platform: ${platform}`);
-      }
-      if (!value[platform].startsWith("http")) {
-        throw new Error(`Invalid URL format for ${platform}.`);
-      }
-    });
-    return true;
-  }),
+  check("preferences.socialLinks")
+    .optional()
+    .custom((value) => {
+      const allowedPlatforms = [
+        "Facebook",
+        "LinkedIn",
+        "Instagram",
+        "Twitter",
+        "Snapchat",
+      ];
+      Object.keys(value).forEach((platform) => {
+        if (!allowedPlatforms.includes(platform)) {
+          throw new Error(`Invalid social media platform: ${platform}`);
+        }
+        if (!value[platform].startsWith("http")) {
+          throw new Error(`Invalid URL format for ${platform}.`);
+        }
+      });
+      return true;
+    }),
 
   check("preferences.bio")
     .optional()
@@ -479,7 +494,6 @@ const eventValidations = {
       return true;
     }),
 
-    check("source").isString().withMessage("Source should be a valid string."),
 
     check("location")
       .not()
@@ -519,6 +533,7 @@ const eventValidations = {
         }
         return true;
       }),
+    ...preferencesValidations,
   ],
 
   updateEvent: [
@@ -563,10 +578,6 @@ const eventValidations = {
         return true;
       }),
 
-    check("source")
-      .optional()
-      .isString()
-      .withMessage("Source should be a valid string."),
 
     check("location")
       .optional()
@@ -605,6 +616,7 @@ const eventValidations = {
         }
         return true;
       }),
+    ...preferencesValidations,
   ],
 };
 

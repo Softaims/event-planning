@@ -1,4 +1,3 @@
-// dbEventDto: Transforms a single event into the required format
 const dbEventDto = (event) => {
   return {
     id: event.id,

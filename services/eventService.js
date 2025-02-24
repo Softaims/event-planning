@@ -78,7 +78,7 @@ const formatMultipleParams = (param) => {
 
 exports.fetchTicketmasterEvents = async ({
   query,
-  placeCategory,
+
   city,
   latitude,
   longitude,
@@ -92,8 +92,7 @@ exports.fetchTicketmasterEvents = async ({
     console.log("filteredQuery", filteredQuery);
     const formattedEventCategory = formatMultipleParams(eventCategory);
     console.log("formattedEventCategory", formattedEventCategory);
-    const formattedPlaceCategory = formatMultipleParams(placeCategory);
-    console.log("formattedPlaceCategory", formattedPlaceCategory);
+
     const response = await axios.get(TICKET_MASTER_URL, {
       params: {
         apikey: process.env.TICKETMASTER_API_KEY,
@@ -347,48 +346,17 @@ exports.createEvent = async (eventData) => {
   return event;
 };
 
-// Get All Events
-exports.getEvents = async (filters) => {
-  const { page = 0, limit = 10 } = filters;
-
-  const skip = page * limit;
-
-  if (skip < 0) {
-    throw new Error("Page value cannot be negative.");
-  }
-
-  const events = await prisma.event.findMany({
-    skip,
-    take: Number(limit),
-    orderBy: {
-      dateTime: "asc",
-    },
-  });
-
-  return events;
-};
-
-// Get Single Event
-exports.getEvent = async (id) => {
-  const event = await prisma.event.findUnique({
-    where: { id },
-  });
-
-  if (!event) {
-    throw new AppError("Event not found", 404);
-  }
-
-  return event;
-};
-
-// Update Event
-exports.updateEvent = async (id, eventData) => {
+exports.updateEvent = async (id, eventData, userId) => {
   const existingEvent = await prisma.event.findUnique({
     where: { id },
   });
 
   if (!existingEvent) {
     throw new AppError("Event not found", 404);
+  }
+
+  if (existingEvent.userId !== userId) {
+    throw new AppError("You are not authorized to update this event", 403);
   }
 
   const updatedEvent = await prisma.event.update({
@@ -399,14 +367,26 @@ exports.updateEvent = async (id, eventData) => {
   return updatedEvent;
 };
 
-// Delete Event
-exports.deleteEvent = async (id) => {
+exports.getUserEvents = async (userId) => {
+  const events = await prisma.event.findMany({
+    where: { userId },
+    orderBy: { dateTime: "asc" },
+  });
+
+  return events;
+};
+
+exports.deleteEvent = async (id, userId) => {
   const existingEvent = await prisma.event.findUnique({
     where: { id },
   });
 
   if (!existingEvent) {
     throw new AppError("Event not found", 404);
+  }
+
+  if (existingEvent.userId !== userId) {
+    throw new AppError("You are not authorized to delete this event", 403);
   }
 
   await prisma.event.delete({

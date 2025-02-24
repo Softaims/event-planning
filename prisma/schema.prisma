@@ -36,13 +36,14 @@ model User {
   location                      Unsupported("geography")?
   long                          Float?
   eventAttendances             EventAttendance[]         @relation
+  createdEvents                 Event[]                   @relation("EventCreatedBy") 
 }
 
 model EventAttendance {
   id         String   @id @default(uuid())
   eventId    String   
   userId     Int  
-  type       String  
+  source     String  
   createdAt  DateTime @default(now())
   status     AttendanceStatus @default(GOING)
   user       User     @relation(fields: [userId], references: [id])
@@ -51,7 +52,7 @@ model EventAttendance {
 
 model Event {
   id           String   @id @default(uuid())
-  name        String 
+  name         String 
   description  String
   dateTime     DateTime
   image        String 
@@ -59,11 +60,14 @@ model Event {
   location     String   
   ageMin       Int     
   ageMax       Int     
-  ticketUrls   String[]
+  ticketUrls   String[] 
   preferences  Json? 
   createdAt    DateTime @default(now()) 
-  updatedAt    DateTime @updatedAt 
+  updatedAt    DateTime @updatedAt
+  createdBy    User     @relation("EventCreatedBy", fields: [userId], references: [id]) // New field
+  userId       Int      // Foreign key for user
 }
+
 
 
 enum AttendanceStatus {

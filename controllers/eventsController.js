@@ -28,7 +28,6 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     const [events, places] = await Promise.all([
       eventService.fetchTicketmasterEvents({
         query,
-        placeCategory,
         city,
         eventCategory,
         size,
@@ -131,14 +130,17 @@ exports.getEventStats = catchAsync(async (req, res, next) => {
   }
 });
 
-
-
 exports.createEvent = catchAsync(async (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("You are not logged in!", 401));
+  }
+
   const eventData = {
     ...req.body,
     source: "uni",
-    ageMin: parseInt(req.body.ageMin, 10), 
-    ageMax: parseInt(req.body.ageMax, 10), 
+    ageMin: parseInt(req.body.ageMin, 10),
+    ageMax: parseInt(req.body.ageMax, 10),
+    userId: req.user.id,
   };
 
   // Handle image upload
@@ -175,25 +177,20 @@ exports.createEvent = catchAsync(async (req, res, next) => {
   });
 });
 
-
-exports.getEvent = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-
-  const event = await eventService.getEvent(id);
-
-  res.status(200).json({
-    status: "success",
-    message: "Event fetched successfully.",
-    data: { event },
-  });
-});
-
-// Update Event
 exports.updateEvent = catchAsync(async (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("You are not logged in!", 401)); // User is not logged in
+  }
+
   const { id } = req.params;
   const eventData = req.body;
 
-  const updatedEvent = await eventService.updateEvent(id, eventData);
+  // Check if event exists and is owned by the user
+  const updatedEvent = await eventService.updateEvent(
+    id,
+    eventData,
+    req.user.id
+  );
 
   res.status(200).json({
     status: "success",
@@ -202,11 +199,29 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
   });
 });
 
-// Delete Event
+exports.getUserEvents = catchAsync(async (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("You are not logged in!", 401));
+  }
+
+  const events = await eventService.getUserEvents(req.user.id);
+
+  res.status(200).json({
+    status: "success",
+    message: "Events fetched successfully.",
+    data: { events },
+  });
+});
+
 exports.deleteEvent = catchAsync(async (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("You are not logged in!", 401));
+  }
+
   const { id } = req.params;
 
-  await eventService.deleteEvent(id);
+  // Check if event exists and is owned by the user
+  await eventService.deleteEvent(id, req.user.id);
 
   res.status(204).json({
     status: "success",
