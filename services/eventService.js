@@ -349,27 +349,20 @@ exports.createEvent = async (eventData) => {
 
 // Get All Events
 exports.getEvents = async (filters) => {
-  const { page = 1, limit = 10, startDate, endDate, location } = filters;
+  const { page = 0, limit = 10 } = filters;
 
-  const where = {};
+  const skip = page * limit;
 
-  if (startDate) {
-    where.eventStart = { gte: new Date(startDate) };
-  }
-
-  if (endDate) {
-    where.eventEnd = { lte: new Date(endDate) };
-  }
-
-  if (location) {
-    where.location = { contains: location };
+  if (skip < 0) {
+    throw new Error("Page value cannot be negative.");
   }
 
   const events = await prisma.event.findMany({
-    where,
-    skip: (page - 1) * limit,
+    skip,
     take: Number(limit),
-    orderBy: { eventStart: "asc" },
+    orderBy: {
+      dateTime: "asc",
+    },
   });
 
   return events;

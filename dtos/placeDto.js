@@ -1,13 +1,15 @@
-// utils/placeDto.js
-
 const placeDto = (place) => {
   return {
     id: place.place_id,
     name: place.name,
-    description: place.description,
+    description: place.description || "",
     // images: place.photos || [],
+    image: "",
     source: "Google Places",
     location: place.formatted_address,
+    ageMin: 0,
+    ageMax: 0,
+    ticketUrls: [],
   };
 };
 

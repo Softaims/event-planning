@@ -434,13 +434,13 @@ const preferencesValidations = [
 
 const eventValidations = {
   createEvent: [
-    check("title")
+    check("name")
       .not()
       .isEmpty()
-      .withMessage("Title is required.")
+      .withMessage("Event name is required.")
       .trim()
       .isLength({ min: 3, max: 100 })
-      .withMessage("Title must be between 3 and 100 characters."),
+      .withMessage("Event name must be between 3 and 100 characters."),
 
     check("description")
       .not()
@@ -450,42 +450,36 @@ const eventValidations = {
       .isLength({ min: 10, max: 1000 })
       .withMessage("Description must be between 10 and 1000 characters."),
 
-    check("eventStart")
+    check("dateTime")
       .not()
       .isEmpty()
-      .withMessage("Event start date is required.")
+      .withMessage("Event date and time is required.")
       .isISO8601()
-      .withMessage("Invalid event start date format.")
+      .withMessage("Invalid event date and time format.")
       .custom((value) => {
-        const startDate = new Date(value);
+        const eventDate = new Date(value);
         const now = new Date();
-        if (startDate < now) {
-          throw new Error("Event start date cannot be in the past.");
+        if (eventDate < now) {
+          throw new Error("Event date and time cannot be in the past.");
         }
         return true;
       }),
 
-    check("eventEnd")
-      .not()
-      .isEmpty()
-      .withMessage("Event end date is required.")
-      .isISO8601()
-      .withMessage("Invalid event end date format.")
-      .custom((value, { req }) => {
-        const endDate = new Date(value);
-        const startDate = new Date(req.body.eventStart);
-        if (endDate <= startDate) {
-          throw new Error("Event end date must be after start date.");
-        }
-        return true;
-      }),
+    check("image").custom((_, { req }) => {
+      if (!req.file) {
+        throw new Error("Event Image is required.");
+      }
 
-    check("image")
-      .not()
-      .isEmpty()
-      .withMessage("Image URL is required.")
-      .isURL()
-      .withMessage("Invalid image URL format."),
+      const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        throw new Error(
+          "Event image must be a valid image file (JPEG, PNG, JPG)."
+        );
+      }
+      return true;
+    }),
+
+    check("source").isString().withMessage("Source should be a valid string."),
 
     check("location")
       .not()
@@ -528,11 +522,11 @@ const eventValidations = {
   ],
 
   updateEvent: [
-    check("title")
+    check("name")
       .optional()
       .trim()
       .isLength({ min: 3, max: 100 })
-      .withMessage("Title must be between 3 and 100 characters."),
+      .withMessage("Event name must be between 3 and 100 characters."),
 
     check("description")
       .optional()
@@ -540,35 +534,39 @@ const eventValidations = {
       .isLength({ min: 10, max: 1000 })
       .withMessage("Description must be between 10 and 1000 characters."),
 
-    check("eventStart")
+    check("dateTime")
       .optional()
       .isISO8601()
-      .withMessage("Invalid event start date format.")
+      .withMessage("Invalid event date and time format.")
       .custom((value) => {
-        const startDate = new Date(value);
+        const eventDate = new Date(value);
         const now = new Date();
-        if (startDate < now) {
-          throw new Error("Event start date cannot be in the past.");
+        if (eventDate < now) {
+          throw new Error("Event date and time cannot be in the past.");
         }
         return true;
       }),
 
-    check("eventEnd")
+    check("image")
       .optional()
-      .isISO8601()
-      .withMessage("Invalid event end date format.")
-      .custom((value, { req }) => {
-        const endDate = new Date(value);
-        const startDate = new Date(
-          req.body.eventStart || (req.event && req.event.eventStart)
-        );
-        if (endDate <= startDate) {
-          throw new Error("Event end date must be after start date.");
+      .custom((_, { req }) => {
+        if (!req.file) {
+          throw new Error("Event Image is required.");
+        }
+
+        const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+          throw new Error(
+            "Event image must be a valid image file (JPEG, PNG, JPG)."
+          );
         }
         return true;
       }),
 
-    check("image").optional().isURL().withMessage("Invalid image URL format."),
+    check("source")
+      .optional()
+      .isString()
+      .withMessage("Source should be a valid string."),
 
     check("location")
       .optional()

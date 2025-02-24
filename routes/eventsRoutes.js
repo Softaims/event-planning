@@ -9,7 +9,12 @@ router.post("/mark-attendence", eventsController.markAttendance);
 router.get("/attendence/:eventId", eventsController.getEventAttendance);
 router.get("/:eventId/stats/:userId", eventsController.getEventStats);
 
-router.post("/", eventValidations.createEvent, eventsController.createEvent);
+router.post(
+  "/",
+  upload.single("image"),
+  eventValidations.createEvent,
+  eventsController.createEvent
+);
 
 // Get All Events
 router.get("/created-events", eventsController.getEvents);
