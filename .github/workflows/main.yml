@@ -24,6 +24,7 @@ jobs:
         run: |
           ssh root@52.56.252.188 << 'EOF'
           cd event-planning 
+          git stash
           git pull origin main
           npm install   
           pm2 restart all
