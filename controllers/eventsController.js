@@ -63,10 +63,14 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     mergedResults.sort((a, b) => a.name.localeCompare(b.name));
 
     res.status(200).json({
-      page,
-      size,
-      totalElements: mergedResults.length,
-      results: mergedResults,
+      status: "success",
+      message: "Events and places fetched successfully.",
+      data: {
+        page,
+        size,
+        totalElements: mergedResults.length,
+        results: mergedResults,
+      },
     });
   } catch (error) {
     logger.error("Error in getEventsAndPlaces:", error);
@@ -96,7 +100,11 @@ exports.getEventAttendance = catchAsync(async (req, res, next) => {
   try {
     const { eventId } = req.params;
     const attendanceData = await eventService.getEventAttendance(eventId);
-    res.status(200).json(attendanceData);
+    res.status(200).json({
+      status: "success",
+      message: "Attendance fetched successfully.",
+      date: { attendanceData },
+    });
   } catch (error) {
     logger.error("Error in getEventAttendance:", error);
     next(new AppError(error.message, 400));
@@ -108,7 +116,13 @@ exports.isUserGoing = catchAsync(async (req, res, next) => {
   try {
     const { eventId, userId } = req.params;
     const result = await eventService.isUserGoing(eventId, userId);
-    res.status(200).json(result);
+    res.status(200).json(
+      {
+        status: "success",
+        message: "Attendance checked successfully.",
+        data: {  result },
+      }
+    );
   } catch (error) {
     logger.error("Error in isUserGoing:", error);
     next(new AppError(error.message, 400));
@@ -123,7 +137,11 @@ exports.getEventStats = catchAsync(async (req, res, next) => {
       userId,
     });
 
-    res.status(200).json(eventStats);
+    res.status(200).json({
+      status: "success",
+      message: "Event stats fetched successfully.",
+      data: { eventStats },
+    });
   } catch (error) {
     logger.error("Error in getEventStats:", error);
     next(new AppError(error.message, 400));
