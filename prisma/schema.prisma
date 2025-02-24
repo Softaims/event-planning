@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id                            Int                       @id @default(autoincrement())
-  email                         String                    
+  email                         String
   emailVerified                 Boolean                   @default(false)
   emailVerificationToken        String?
   password                      String
@@ -35,6 +35,46 @@ model User {
   lat                           Float?
   location                      Unsupported("geography")?
   long                          Float?
+  eventAttendances             EventAttendance[]         @relation
+}
+
+model EventAttendance {
+  id         String   @id @default(uuid())
+  eventId    String   
+  userId     Int  
+  type       String  
+  createdAt  DateTime @default(now())
+  status     AttendanceStatus @default(GOING)
+  user       User     @relation(fields: [userId], references: [id])
+  @@unique([eventId, userId]) // Ensure a user can only mark attendance once per event
+}
+
+model Event {
+  id           String   @id @default(uuid())
+  title        String 
+  description  String
+  eventStart  DateTime
+  eventEnd    DateTime
+  image        String  
+  location     String   
+  ageMin       Int     
+  ageMax       Int     
+  ticketUrls   String[] 
+  createdAt    DateTime @default(now()) 
+  updatedAt    DateTime @updatedAt 
+}
+
+
+
+
+
+
+
+
+
+enum AttendanceStatus {
+  GOING
+  NOT_GOING
 }
 
 enum Role {
