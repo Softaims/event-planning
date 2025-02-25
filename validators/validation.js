@@ -92,12 +92,12 @@ const authValidations = {
         throw new Error("Profile image is required.");
       }
 
-      const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
-      if (!allowedMimeTypes.includes(req.file.mimetype)) {
-        throw new Error(
-          "Profile image must be a valid image file (JPEG, PNG, JPG)."
-        );
-      }
+      // const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+      // if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      //   throw new Error(
+      //     "Profile image must be a valid image file (JPEG, PNG, JPG)."
+      //   );
+      // }
       return true;
     }),
 
