@@ -251,7 +251,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     }
 
     // 3) Generate a 6-digit numeric OTP
-    const resetToken = crypto.randomInt(100000, 999999).toString(); 
+    const resetToken = process.env.NODE_ENV === "development" ? "111111" : crypto.randomInt(100000, 999999).toString();
     console.log("Generated OTP:", resetToken);
     const hashedToken = authService.hashToken(resetToken);
     
