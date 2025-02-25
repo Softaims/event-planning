@@ -87,19 +87,19 @@ const authValidations = {
       .isIn(["he_him", "she_her", "they_them", "other"])
       .withMessage("Invalid pronoun selection."),
 
-    check("profileImage").custom((_, { req }) => {
-      if (!req.file) {
-        throw new Error("Profile image is required.");
-      }
+    // check("profileImage").custom((_, { req }) => {
+    //   if (!req.file) {
+    //     throw new Error("Profile image is required.");
+    //   }
 
-      // const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
-      // if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      //   throw new Error(
-      //     "Profile image must be a valid image file (JPEG, PNG, JPG)."
-      //   );
-      // }
-      return true;
-    }),
+    //   const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+    //   if (!allowedMimeTypes.includes(req.file.mimetype)) {
+    //     throw new Error(
+    //       "Profile image must be a valid image file (JPEG, PNG, JPG)."
+    //     );
+    //   }
+    //   return true;
+    // }),
 
     check("lat")
       .optional()
