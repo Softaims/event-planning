@@ -5,7 +5,13 @@ const getDefaultPreferences = () => ({
     interests: {
         techDigital: [],
         creativeArts: [],
-        sportsGaming: []
+        sportsGaming: [],
+        foodDrink: [],
+        fitnessWellness: [],
+        lifestyleFashion: [],
+        outdoorAdventure: [],
+        nightlifeMusic: [],
+        techDigital: []
     },
     musicGenre: "",
     zodiacSign: "",
