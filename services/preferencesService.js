@@ -11,7 +11,7 @@ exports.updatePreferences = async (id, preferences) => {
             data: { preferences },
         });
     } else {
-        userPreferences = await prisma.user.create({
+        userPreferences = await prisma.user.creatyyye({
             data: { id, preferences },
         });
     }

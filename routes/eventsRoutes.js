@@ -7,11 +7,20 @@ const validationMiddleware = require("../middlewares/validationMiddleware");
 const authMiddleware = require("../middlewares/authMiddleware");
 
 router.get("/", eventsController.getEvents);
-router.post("/mark-attendence", eventsController.markAttendance);
 router.get("/attendence/:eventId", eventsController.getEventAttendance);
 router.get("/:eventId/stats/:userId", eventsController.getEventStats);
+router.get(
+  "/me",
+  authMiddleware.protect,
 
-router.get("/me", authMiddleware.protect, eventsController.getUserEvents);
+  eventsController.getUserEventOverview
+);
+
+router.post(
+  "/interact",
+  authMiddleware.protect,
+  eventsController.handleEventInteraction
+);
 
 router.post(
   "/",
@@ -22,7 +31,6 @@ router.post(
   eventsController.createEvent
 );
 
-// Update Event
 router.put(
   "/:id",
   authMiddleware.protect,

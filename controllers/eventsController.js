@@ -78,23 +78,6 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   }
 });
 
-exports.markAttendance = catchAsync(async (req, res, next) => {
-  try {
-    const { eventId, userId, type, status } = req.body;
-    const result = await eventService.markAttendance({
-      eventId,
-      userId,
-      type,
-      status,
-    });
-
-    res.status(200).json({ result });
-  } catch (error) {
-    logger.error("Error in markAttendance:", error);
-    next(new AppError(error.message, 400));
-  }
-});
-
 // Get attendance for an event/place
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
   try {
@@ -103,7 +86,7 @@ exports.getEventAttendance = catchAsync(async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Attendance fetched successfully.",
-      date: { attendanceData },
+      date: { event: attendanceData },
     });
   } catch (error) {
     logger.error("Error in getEventAttendance:", error);
@@ -116,13 +99,11 @@ exports.isUserGoing = catchAsync(async (req, res, next) => {
   try {
     const { eventId, userId } = req.params;
     const result = await eventService.isUserGoing(eventId, userId);
-    res.status(200).json(
-      {
-        status: "success",
-        message: "Attendance checked successfully.",
-        data: {  result },
-      }
-    );
+    res.status(200).json({
+      status: "success",
+      message: "Attendance checked successfully.",
+      data: { result },
+    });
   } catch (error) {
     logger.error("Error in isUserGoing:", error);
     next(new AppError(error.message, 400));
@@ -140,7 +121,7 @@ exports.getEventStats = catchAsync(async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Event stats fetched successfully.",
-      data: { eventStats },
+      data: { event: eventStats },
     });
   } catch (error) {
     logger.error("Error in getEventStats:", error);
@@ -217,19 +198,7 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getUserEvents = catchAsync(async (req, res, next) => {
-  if (!req.user) {
-    return next(new AppError("You are not logged in!", 401));
-  }
 
-  const events = await eventService.getUserEvents(req.user.id);
-
-  res.status(200).json({
-    status: "success",
-    message: "Events fetched successfully.",
-    data: { events },
-  });
-});
 
 exports.deleteEvent = catchAsync(async (req, res, next) => {
   if (!req.user) {
@@ -245,4 +214,134 @@ exports.deleteEvent = catchAsync(async (req, res, next) => {
     status: "success",
     message: "Event deleted successfully.",
   });
+});
+
+exports.handleEventInteraction = catchAsync(async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const {
+      eventId, // ID of the event (internal or external)
+      isLiked, // Boolean value for like status
+      isGoing, // Boolean value for going status
+      eventData, // Additional event data for external events
+    } = req.body;
+
+    const userId = req.user.id;
+
+    // Validate input
+    if (!eventId) {
+      return next(new AppError("Event ID is required", 400));
+    }
+
+    // Check if isLiked and isGoing are boolean or undefined
+    if (isLiked !== undefined && typeof isLiked !== "boolean") {
+      return next(new AppError("isLiked must be a boolean value", 400));
+    }
+
+    if (isGoing !== undefined && typeof isGoing !== "boolean") {
+      return next(new AppError("isGoing must be a boolean value", 400));
+    }
+
+    // Handle the interaction through the service
+    const attendanceRecord = await eventService.handleInteraction({
+      userId,
+      eventId,
+      isLiked,
+      isGoing,
+      eventData,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Event interaction processed successfully",
+      data: {
+        attendance: attendanceRecord,
+      },
+    });
+  } catch (error) {
+    logger.error("Error handling event interaction:", error);
+    next(new AppError(error.message, 400));
+  }
+});
+
+
+
+exports.removeEventInteraction = catchAsync(async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const { eventId } = req.params;
+    const userId = req.user.id;
+
+    if (!eventId) {
+      return next(new AppError("Event ID is required", 400));
+    }
+
+    await eventService.removeInteraction(userId, eventId);
+
+    res.status(200).json({
+      status: "success",
+      message: "Event interaction removed successfully",
+    });
+  } catch (error) {
+    logger.error("Error removing event interaction:", error);
+    next(new AppError(error.message, 400));
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+exports.getUserEventOverview = catchAsync(async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const userId = req.user.id;
+
+    // Fetch user-created events
+    const createdEvents = await eventService.getUserEvents(userId);
+
+    // Fetch user interactions
+    const likedEvents = await eventService.getUserInteractions(userId, "liked");
+    const goingEvents = await eventService.getUserInteractions(userId, "going");
+
+    // Fetch events user explicitly marked as "not going"
+    const notGoingEvents = await prisma.eventAttendance.findMany({
+      where: {
+        userId,
+        isGoing: false,
+      },
+      include: {
+        event: true, // Include related event data
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "User event overview retrieved successfully",
+      data: {
+        createdEvents,
+        likedEvents,
+        goingEvents,
+        notGoingEvents: notGoingEvents.map((record) => record.event), // Extract event data
+      },
+    });
+  } catch (error) {
+    logger.error("Error getting user event overview:", error);
+    next(new AppError(error.message, 400));
+  }
 });

@@ -393,3 +393,174 @@ exports.deleteEvent = async (id, userId) => {
     where: { id },
   });
 };
+
+
+
+exports.handleInteraction = async ({
+  userId,
+  eventId,
+  isLiked,
+  isGoing,
+  eventData,
+}) => {
+  const isUniEvent = eventData?.source === "uni" || !eventData;
+  let externalEventId = null;
+
+  if (!isUniEvent) {
+
+    if (
+      !eventData ||
+      !eventData.name ||
+      !eventData.description ||
+      !eventData.source
+    ) {
+      throw new Error(
+        "External event data must include name, description, and source"
+      );
+    }
+
+    // Check if the external event already exists
+    let externalEvent = await prisma.externalEvent.findFirst({
+      where: {
+        id: eventId,
+      },
+    });
+
+    // If external event doesn't exist, create it
+    if (!externalEvent) {
+      externalEvent = await prisma.externalEvent.create({
+        data: {
+          id: eventId,
+          name: eventData.name,
+          description: eventData.description,
+          source: eventData.source,
+          image: eventData.image || null,
+          location: eventData.location || null,
+          dateTime: eventData.dateTime ? new Date(eventData.dateTime) : null,
+        },
+      });
+      logger.info(`Created new external event: ${eventId}`);
+    }
+
+    externalEventId = externalEvent.id;
+  }
+
+  // Find existing attendance record
+  const existingAttendance = await prisma.eventAttendance.findUnique({
+    where: {
+      eventId_userId: {
+        eventId: eventId,
+        userId: userId,
+      },
+    },
+  });
+
+  // Prepare update data - only include fields that were provided
+  const updateData = {};
+  if (isLiked !== undefined) updateData.isLiked = isLiked;
+  if (isGoing !== undefined) updateData.isGoing = isGoing;
+
+  // Update or create attendance record
+  let attendanceRecord;
+
+  if (existingAttendance) {
+    // Update existing record with only the fields that were provided
+    attendanceRecord = await prisma.eventAttendance.update({
+      where: {
+        id: existingAttendance.id,
+      },
+      data: updateData,
+    });
+    logger.info(
+      `Updated attendance record for user ${userId} and event ${eventId}`
+    );
+  } else {
+    // Create new record
+    attendanceRecord = await prisma.eventAttendance.create({
+      data: {
+        id: uuidv4(),
+        eventId: eventId,
+        userId: userId,
+        externalEventId: isUniEvent ? null : externalEventId,
+        isLiked: isLiked ?? false,
+        isGoing: isGoing ?? false,
+      },
+    });
+    logger.info(
+      `Created new attendance record for user ${userId} and event ${eventId}`
+    );
+  }
+
+  return attendanceRecord;
+};
+
+
+exports.getUserInteractions = async (userId, filter) => {
+  // Build query conditions
+  const whereCondition = { userId };
+
+  if (filter === "liked") {
+    whereCondition.isLiked = true;
+  } else if (filter === "going") {
+    whereCondition.isGoing = true;
+  }
+
+  // Get attendance records with related event data
+  const attendanceRecords = await prisma.eventAttendance.findMany({
+    where: whereCondition,
+    include: {
+      externalEvent: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  // For internal events, we need to fetch the event details separately
+  const internalEventIds = attendanceRecords
+    .filter((record) => !record.externalEventId)
+    .map((record) => record.eventId);
+
+  const internalEvents =
+    internalEventIds.length > 0
+      ? await prisma.event.findMany({
+          where: {
+            id: { in: internalEventIds },
+          },
+        })
+      : [];
+
+  // Combine the data for response
+  const userEvents = attendanceRecords.map((record) => {
+    const eventDetails = record.externalEventId
+      ? record.externalEvent
+      : internalEvents.find((e) => e.id === record.eventId) || null;
+
+    return {
+      interactionId: record.id,
+      eventId: record.eventId,
+      isLiked: record.isLiked,
+      isGoing: record.isGoing,
+      interactionDate: record.createdAt,
+      event: eventDetails,
+    };
+  });
+
+  return userEvents;
+};
+
+exports.removeInteraction = async (userId, eventId) => {
+  // Delete the attendance record
+  const deleteResult = await prisma.eventAttendance.deleteMany({
+    where: {
+      eventId,
+      userId,
+    },
+  });
+
+  logger.info(
+    `Removed event interaction for user ${userId} and event ${eventId}. Records deleted: ${deleteResult.count}`
+  );
+
+  return;
+};
