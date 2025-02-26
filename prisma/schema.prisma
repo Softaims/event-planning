@@ -42,12 +42,26 @@ model User {
 model EventAttendance {
   id         String   @id @default(uuid())
   eventId    String   
-  userId     Int  
-  source     String  
+  externalEventId String?
+  userId     Int   
   createdAt  DateTime @default(now())
-  status     AttendanceStatus @default(GOING)
+  isGoing    Boolean  @default(false)
+  isLiked    Boolean  @default(false)
   user       User     @relation(fields: [userId], references: [id])
+  externalEvent   ExternalEvent? @relation(fields: [externalEventId], references: [id])
   @@unique([eventId, userId]) 
+}
+
+model ExternalEvent {
+  id              String  @id @default(uuid())
+  source          String 
+  description     String
+  name            String  
+  image           String?  
+  location        String?  
+  dateTime        DateTime?  
+  createdAt       DateTime @default(now())
+  eventAttendances EventAttendance[] @relation
 }
 
 model Event {
@@ -69,11 +83,6 @@ model Event {
 }
 
 
-
-enum AttendanceStatus {
-  GOING
-  NOT_GOING
-}
 
 enum Role {
   Admin

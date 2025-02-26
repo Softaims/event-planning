@@ -3,7 +3,7 @@ const placeDto = (place) => {
     id: place.place_id,
     name: place.name,
     description: place.description || "",
-    // images: place.photos || [],
+    dateTime:  "",
     image: "",
     source: "Google Places",
     location: place.formatted_address,
