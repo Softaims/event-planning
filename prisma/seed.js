@@ -1,279 +1,190 @@
 import { PrismaClient } from "@prisma/client";
 import { faker } from "@faker-js/faker";
-import constants from "../constants/index.js";
+import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 
+// Settings for seed data
+const NUM_USER_CREATED_EVENTS = 5; // Events created by each user
+const NUM_EXTERNAL_EVENTS = 10; // External events to create (half Ticketmaster, half Google Places)
+const SOURCES = ["ticketmaster", "Google Places"]; // Only these two external sources
+const USER_IDS = [1, 2]; // Users for whom we'll create events and interactions
+
 async function main() {
-  // Clear existing data
-  // await prisma.eventAttendance.deleteMany({});
-  // await prisma.externalEvent.deleteMany({});
-  // await prisma.event.deleteMany({});
-  // await prisma.user.deleteMany({});
+  try {
+    console.log("Starting seed process...");
 
-  // Create 20 users with verified phone numbers
-  const users = [];
+    // Create user-created events for each user
+    const userCreatedEvents = [];
 
-  // Get values from constants file
-  // Ensure these match the structure of your constants file
-  const colleges = constants.colleges || [];
-  const majors = constants.majors || [];
-  const zodiacSigns = constants.zodiacSigns || [];
-  const relationshipStatuses = constants.relationshipStatuses || [];
-  const musicGenres = constants.musicGenres || [];
+    for (const userId of USER_IDS) {
+      console.log(`Creating events for user ID ${userId}...`);
 
-  // For interests, check the structure in your constants file
-  const techDigitalInterests = constants.interests?.techDigital || [];
-  const creativeArtsInterests = constants.interests?.creativeArts || [];
-  const sportsGamingInterests = constants.interests?.sportsGaming || [];
+      for (let i = 0; i < NUM_USER_CREATED_EVENTS; i++) {
+        const event = await prisma.event.create({
+          data: {
+            id: uuidv4(),
+            name: faker.company.catchPhrase(),
+            description: faker.lorem.paragraphs(2),
+            dateTime: faker.date.future(),
+            image: `https://picsum.photos/seed/${faker.number.int(
+              99999
+            )}/800/600`,
+            source: "uni", // User-created event
+            location: faker.location.streetAddress(),
+            ageMin: faker.number.int({ min: 16, max: 21 }),
+            ageMax: faker.number.int({ min: 22, max: 65 }),
+            ticketUrls: [faker.internet.url()],
+            preferences: {
+              categories: [
+                faker.word.sample(),
+                faker.word.sample(),
+                faker.word.sample(),
+              ],
+            },
+            userId: userId,
+          },
+        });
 
-  // Create users with different preference patterns
-  for (let i = 0; i < 20; i++) {
-    const firstName = faker.person.firstName();
-    const lastName = faker.person.lastName();
-    const email = faker.internet.email({ firstName, lastName });
+        userCreatedEvents.push(event);
+        console.log(`Created user event: ${event.name}`);
+      }
+    }
 
-    // Create interest patterns
-    // Some users have many interests, some have few
-    const techInterests = faker.helpers.arrayElements(
-      techDigitalInterests,
-      faker.number.int({
-        min: 0,
-        max: Math.min(5, techDigitalInterests.length),
-      })
-    );
+    // Create external events - half from Ticketmaster, half from Google Places
+    const externalEvents = [];
 
-    const creativeInterests = faker.helpers.arrayElements(
-      creativeArtsInterests,
-      faker.number.int({
-        min: 0,
-        max: Math.min(5, creativeArtsInterests.length),
-      })
-    );
+    for (let i = 0; i < NUM_EXTERNAL_EVENTS; i++) {
+      // Alternate between Ticketmaster and Google Places
+      const source = SOURCES[i % 2];
 
-    const sportsInterests = faker.helpers.arrayElements(
-      sportsGamingInterests,
-      faker.number.int({
-        min: 0,
-        max: Math.min(5, sportsGamingInterests.length),
-      })
-    );
+      // Set location format based on source
+      let location;
+      if (source === "Google Places") {
+        // Google Places typically has full address
+        location = `${faker.location.streetAddress()}, ${faker.location.city()}, ${faker.location.state()} ${faker.location.zipCode()}`;
+      } else {
+        // Ticketmaster often has venue names
+        location = `${faker.company.name()} Arena, ${faker.location.city()}`;
+      }
 
-    // Generate random preferences
-    const preferences = {
-      bio: faker.lorem.paragraph(),
-      major: faker.helpers.arrayElement(
-        majors.length > 0 ? majors : ["Computer Science"]
-      ),
-      college: faker.helpers.arrayElement(
-        colleges.length > 0
-          ? colleges
-          : ["University of Maryland, College Park (UMD)"]
-      ),
-      interests: {
-        techDigital: techInterests,
-        creativeArts: creativeInterests,
-        sportsGaming: sportsInterests,
-      },
-      musicGenre: faker.helpers.arrayElement(
-        musicGenres.length > 0 ? musicGenres : ["Pop"]
-      ),
-      zodiacSign: faker.helpers.arrayElement(
-        zodiacSigns.length > 0 ? zodiacSigns : ["Aries"]
-      ),
-      socialLinks: {
-        Facebook: faker.datatype.boolean()
-          ? `https://facebook.com/${firstName.toLowerCase()}${lastName.toLowerCase()}`
-          : "",
-        Instagram: faker.datatype.boolean()
-          ? `https://instagram.com/${firstName.toLowerCase()}${lastName.toLowerCase()}`
-          : "",
-      },
-      collegeClubs: constants.collegeClubs
-        ? faker.helpers.arrayElements(
-            constants.collegeClubs,
-            faker.number.int({ min: 0, max: 3 })
-          )
-        : [],
-      favoriteShows: constants.shows
-        ? faker.helpers.arrayElements(
-            constants.shows,
-            faker.number.int({ min: 0, max: 5 })
-          )
-        : [],
-      graduatingYear: faker.number.int({ min: 2024, max: 2028 }),
-      favoriteArtists: constants.artists
-        ? faker.helpers.arrayElements(
-            constants.artists,
-            faker.number.int({ min: 0, max: 5 })
-          )
-        : [],
-      favoritePlacesToGo: constants.places
-        ? faker.helpers.arrayElements(
-            constants.places,
-            faker.number.int({ min: 0, max: 4 })
-          )
-        : [],
-      relationshipStatus: faker.helpers.arrayElement(
-        relationshipStatuses.length > 0 ? relationshipStatuses : ["Single"]
-      ),
-      favoriteSportsTeams: constants.sportsTeams
-        ? faker.helpers.arrayElements(
-            constants.sportsTeams,
-            faker.number.int({ min: 0, max: 3 })
-          )
-        : [],
-    };
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        emailVerified: faker.datatype.boolean(),
-        password: faker.internet.password(),
-        firstName,
-        lastName,
-        phoneNumber: faker.phone.number(),
-        phoneVerified: true, // All users have verified phone numbers
-        dob: faker.date.birthdate({ min: 18, max: 30, mode: "age" }),
-        pronouns: "he_him",
-        profileImage: faker.datatype.boolean() ? faker.image.avatar() : null,
-        active: true,
-        role: "User",
-        preferences,
-        isRegistrationComplete: true,
-        lat: faker.location.latitude(),
-        long: faker.location.longitude(),
-      },
-    });
-
-    users.push(user);
-  }
-
-  console.log(`Created ${users.length} users`);
-
-  // Create 10 events by the first user (Admin)
-  const eventLocations = [
-    "University Auditorium",
-    "Student Center",
-    "Campus Lawn",
-    "Engineering Building",
-    "Arts Department",
-    "University Stadium",
-    "Library Hall",
-    "Computer Science Building",
-    "Music Department",
-    "Recreation Center",
-  ];
-
-  const events = [];
-  for (let i = 0; i < 10; i++) {
-    const event = await prisma.event.create({
-      data: {
-        name: faker.word.words({ count: { min: 2, max: 5 } }),
-        description: faker.lorem.paragraphs(2),
-        dateTime: faker.date.future(),
-        image: faker.image.urlLoremFlickr({ category: "event" }),
-        source: "uni",
-        location: faker.helpers.arrayElement(eventLocations),
-        ageMin: faker.number.int({ min: 18, max: 21 }),
-        ageMax: faker.number.int({ min: 22, max: 50 }),
-        ticketUrls: Array(faker.number.int({ min: 1, max: 3 }))
-          .fill(null)
-          .map(() => faker.internet.url()),
-        preferences: {
-          type: faker.helpers.arrayElement([
-            "academic",
-            "social",
-            "career",
-            "entertainment",
-          ]),
-          category: faker.helpers.arrayElement([
-            "workshop",
-            "party",
-            "lecture",
-            "concert",
-          ]),
-        },
-        userId: users[0].id, // First user creates all events
-      },
-    });
-
-    events.push(event);
-  }
-
-  console.log(`Created ${events.length} events`);
-
-  // Create 5 external events
-  const externalEvents = [];
-  for (let i = 0; i < 5; i++) {
-    const externalEvent = await prisma.externalEvent.create({
-      data: {
-        source: "uni",
-        name: faker.word.words({ count: { min: 2, max: 5 } }),
-        description: faker.lorem.paragraphs(2),
-        image: faker.image.urlLoremFlickr({ category: "event" }),
-        location: faker.helpers.arrayElement(eventLocations),
-        dateTime: faker.date.future(),
-      },
-    });
-
-    externalEvents.push(externalEvent);
-  }
-
-  console.log(`Created ${externalEvents.length} external events`);
-
-  // Create event attendances - users attend both regular and external events
-  // For regular events
-  for (const event of events) {
-    // Random subset of users attend each event
-    const attendingUsers = faker.helpers.arrayElements(
-      users,
-      faker.number.int({ min: 5, max: 15 })
-    );
-
-    for (const user of attendingUsers) {
-      await prisma.eventAttendance.create({
+      const event = await prisma.event.create({
         data: {
-          eventId: event.id,
-          userId: user.id,
-          isGoing: faker.datatype.boolean(0.7), // 70% likelihood of going
-          isLiked: faker.datatype.boolean(0.5), // 50% likelihood of liking
+          id: uuidv4(),
+          externalId:
+            source === "ticketmaster"
+              ? `TM-${faker.string.alphanumeric(10)}` // Ticketmaster ID format
+              : `GP-${faker.string.alphanumeric(16)}`, // Google Places ID format
+          name:
+            source === "ticketmaster"
+              ? `${faker.music.songName()} - ${faker.person.fullName()} Tour`
+              : faker.company.catchPhrase(),
+          description: faker.lorem.paragraphs(2),
+          dateTime: faker.date.future(),
+          image: `https://picsum.photos/seed/${faker.number.int(
+            99999
+          )}/800/600`,
+          source: source,
+          location: location,
+          ageMin:
+            source === "ticketmaster"
+              ? faker.number.int({ min: 0, max: 21 })
+              : null,
+          ageMax:
+            source === "ticketmaster"
+              ? faker.number.int({ min: 65, max: 100 })
+              : null,
+          ticketUrls:
+            source === "ticketmaster"
+              ? [
+                  faker.internet.url({
+                    protocol: "https",
+                    domain: "ticketmaster.com",
+                  }),
+                ]
+              : [],
+          preferences:
+            source === "ticketmaster"
+              ? {
+                  genre: faker.music.genre(),
+                  venue_type: faker.helpers.arrayElement([
+                    "stadium",
+                    "arena",
+                    "theater",
+                    "club",
+                  ]),
+                }
+              : {
+                  type: faker.helpers.arrayElement([
+                    "restaurant",
+                    "bar",
+                    "cafe",
+                    "museum",
+                    "park",
+                    "shopping",
+                  ]),
+                  rating: faker.number.float({
+                    min: 3.0,
+                    max: 5.0,
+                    precision: 0.1,
+                  }),
+                },
         },
       });
-    }
-  }
 
-  // For external events
-  for (const externalEvent of externalEvents) {
-    // Random subset of users attend each external event
-    const attendingUsers = faker.helpers.arrayElements(
-      users,
-      faker.number.int({ min: 5, max: 15 })
+      externalEvents.push(event);
+      console.log(`Created external event from ${source}: ${event.name}`);
+    }
+
+    // Create interactions for all users
+    const allEvents = [...userCreatedEvents, ...externalEvents];
+
+    for (const userId of USER_IDS) {
+      console.log(`Creating interactions for user ID ${userId}...`);
+
+      // Each user interacts with some random subset of events
+      const eventsToInteractWith = faker.helpers.arrayElements(
+        allEvents,
+        faker.number.int({ min: 5, max: allEvents.length })
+      );
+
+      for (const event of eventsToInteractWith) {
+        const isUserOwnEvent = event.userId === userId;
+
+        // Users always like and attend their own events
+        const isLiked = isUserOwnEvent ? true : faker.datatype.boolean(0.6);
+        const isGoing = isUserOwnEvent ? true : faker.datatype.boolean(0.4);
+
+        const interaction = await prisma.eventAttendance.create({
+          data: {
+            id: uuidv4(),
+            eventId: event.id,
+            userId: userId,
+            isGoing: isGoing,
+            isLiked: isLiked,
+            createdAt: faker.date.recent(),
+          },
+        });
+
+        console.log(
+          `Created interaction for user ${userId} with event ${event.name} (Going: ${isGoing}, Liked: ${isLiked})`
+        );
+      }
+    }
+
+    console.log("Seed completed successfully!");
+    console.log(`Created ${userCreatedEvents.length} user events`);
+    console.log(
+      `Created ${externalEvents.length} external events (${Math.ceil(
+        NUM_EXTERNAL_EVENTS / 2
+      )} Ticketmaster, ${Math.floor(NUM_EXTERNAL_EVENTS / 2)} Google Places)`
     );
-
-    for (const user of attendingUsers) {
-      await prisma.eventAttendance.create({
-        data: {
-          eventId: "", // Empty string for external events
-          externalEventId: externalEvent.id,
-          userId: user.id,
-          isGoing: faker.datatype.boolean(0.7), // 70% likelihood of going
-          isLiked: faker.datatype.boolean(0.5), // 50% likelihood of liking
-        },
-      });
-    }
+    console.log(`Created interactions for ${USER_IDS.length} users`);
+  } catch (error) {
+    console.error("Error seeding data:", error);
+  } finally {
+    await prisma.$disconnect();
   }
-
-  console.log("Event attendances created");
-
-  console.log("Seeding completed successfully");
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();

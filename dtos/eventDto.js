@@ -4,7 +4,7 @@ const eventDto = (event) => {
     name: event.name,
     description: event.description || "",
     dateTime: event.dates?.start?.dateTime || "",
-    image: event.images?.[0]?.url || [],
+    image: event.images?.[0]?.url || null,
     source: "ticketmaster",
     location: `${event._embedded?.venues?.[0]?.name}, ${event._embedded?.venues?.[0]?.address?.line1}, ${event._embedded?.venues?.[0]?.city?.name}, ${event._embedded?.venues?.[0]?.country?.name}`,
     ageMin: 0,
