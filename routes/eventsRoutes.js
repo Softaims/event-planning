@@ -6,13 +6,20 @@ const router = express.Router();
 const validationMiddleware = require("../middlewares/validationMiddleware");
 const authMiddleware = require("../middlewares/authMiddleware");
 
-router.get("/", eventsController.getEvents);
-router.get("/attendence/:eventId", eventsController.getEventAttendance);
-router.get("/:eventId/stats/:userId", eventsController.getEventStats);
+router.get("/", authMiddleware.protect, eventsController.getEvents);
+router.get(
+  "/attendence/:eventId",
+  authMiddleware.protect,
+  eventsController.getEventAttendance
+);
+router.get(
+  "/:eventId/stats",
+  authMiddleware.protect,
+  eventsController.getEventStats
+);
 router.get(
   "/me",
   authMiddleware.protect,
-
   eventsController.getUserEventOverview
 );
 
@@ -31,15 +38,18 @@ router.post(
   eventsController.createEvent
 );
 
-router.put(
-  "/:id",
+
+router.patch(
+  "/:eventId",
   authMiddleware.protect,
+  upload.single("image"),
   eventValidations.updateEvent,
   validationMiddleware.validate,
   eventsController.updateEvent
 );
 
-// Delete Event
-router.delete("/:id", authMiddleware.protect, eventsController.deleteEvent);
+
+router.delete("/:eventId", authMiddleware.protect, eventsController.deleteEvent);
+
 
 module.exports = router;

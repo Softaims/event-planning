@@ -35,54 +35,43 @@ model User {
   lat                           Float?
   location                      Unsupported("geography")?
   long                          Float?
-  eventAttendances             EventAttendance[]         @relation
+  eventAttendances              EventAttendance[]
   createdEvents                 Event[]                   @relation("EventCreatedBy") 
 }
 
 model EventAttendance {
   id         String   @id @default(uuid())
   eventId    String   
-  externalEventId String?
   userId     Int   
   createdAt  DateTime @default(now())
   isGoing    Boolean  @default(false)
   isLiked    Boolean  @default(false)
   user       User     @relation(fields: [userId], references: [id])
-  externalEvent   ExternalEvent? @relation(fields: [externalEventId], references: [id])
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   @@unique([eventId, userId]) 
-}
-
-model ExternalEvent {
-  id              String  @id @default(uuid())
-  source          String 
-  description     String
-  name            String  
-  image           String?  
-  location        String?  
-  dateTime        DateTime?  
-  createdAt       DateTime @default(now())
-  eventAttendances EventAttendance[] @relation
+  
 }
 
 model Event {
   id           String   @id @default(uuid())
+  externalId   String?  @unique 
   name         String 
-  description  String
-  dateTime     DateTime
-  image        String 
-  source       String
-  location     String   
-  ageMin       Int     
-  ageMax       Int     
+  description  String?
+  dateTime     DateTime?
+  image        String? 
+  source       String?  
+  location     String?   
+  ageMin       Int?    
+  ageMax       Int?     
   ticketUrls   String[] 
   preferences  Json? 
   createdAt    DateTime @default(now()) 
   updatedAt    DateTime @updatedAt
-  createdBy    User     @relation("EventCreatedBy", fields: [userId], references: [id]) 
-  userId       Int      
+  createdBy    User?    @relation("EventCreatedBy", fields: [userId], references: [id]) 
+  userId       Int?     
+  eventAttendances EventAttendance[] 
+  
 }
-
-
 
 enum Role {
   Admin

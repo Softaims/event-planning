@@ -3,7 +3,7 @@ const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
 const stopword = require("stopword");
 const { prisma } = require("../db");
-
+const { v4: uuidv4 } = require("uuid");
 const GOOGLE_PLACES_URL =
   "https://maps.googleapis.com/maps/api/place/textsearch/json";
 
@@ -78,7 +78,6 @@ const formatMultipleParams = (param) => {
 
 exports.fetchTicketmasterEvents = async ({
   query,
-
   city,
   latitude,
   longitude,
@@ -88,10 +87,9 @@ exports.fetchTicketmasterEvents = async ({
   radius,
 }) => {
   try {
-    const filteredQuery = filterQuery(query);
-    console.log("filteredQuery", filteredQuery);
+    // const filteredQuery = filterQuery(query);
     const formattedEventCategory = formatMultipleParams(eventCategory);
-    console.log("formattedEventCategory", formattedEventCategory);
+   
 
     const response = await axios.get(TICKET_MASTER_URL, {
       params: {
@@ -154,34 +152,14 @@ exports.fetchGooglePlaces = async ({
   }
 };
 
-exports.fetchEventById = async (id) => {
-  try {
-    const response = await axios.get(`${TICKET_MASTER_URL}/${id}`, {
-      params: { apikey: process.env.TICKETMASTER_API_KEY },
-    });
 
-    if (!response.data) {
-      throw new AppError("Event not found", 404);
-    }
-
-    return response.data;
-  } catch (error) {
-    logger.error("Error fetching event by ID:", error);
-    if (error.response?.status === 404) {
-      throw new AppError("Event not found", 404);
-    }
-    throw new AppError("Failed to fetch event details", 500);
-  }
-};
-
-// Get attendees of an event/place
 exports.getEventAttendance = async (eventId) => {
   if (!eventId) throw new Error("Event ID is required");
 
   const attendance = await prisma.eventAttendance.findMany({
     where: {
       eventId,
-      status: "GOING",
+      isGoing: true,
     },
     include: { user: true },
   });
@@ -196,45 +174,29 @@ exports.getEventAttendance = async (eventId) => {
   };
 };
 
-// Check if a user is going to an event/place
+exports.getLatestEvents = async (page = 1, size = 10) => {
+  const skip = (page - 1) * size;
+
+  return await prisma.event.findMany({
+    where: {
+      source: "uni",
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    skip,
+    take: size,
+  });
+};
+
 exports.isUserGoing = async (eventId, userId) => {
-  if (!eventId || !userId) throw new Error("Event ID and User ID are required");
-
   const attendance = await prisma.eventAttendance.findFirst({
-    where: { eventId, userId: parseInt(userId) },
+    where: { eventId, userId },
   });
 
-  return { isGoing: attendance ? attendance.status === "GOING" : false };
+  return { isGoing: attendance ? attendance.isGoing : false };
 };
 
-// Mark attendance for an event/place
-exports.markAttendance = async ({ eventId, userId, type, status }) => {
-  if (!eventId || !userId || !status) {
-    throw new Error("Event ID, User ID, and status are required");
-  }
-
-  const existingAttendance = await prisma.eventAttendance.findFirst({
-    where: { eventId, userId: parseInt(userId) },
-  });
-
-  if (existingAttendance) {
-    return await prisma.eventAttendance.update({
-      where: { id: existingAttendance.id },
-      data: { status },
-    });
-  } else {
-    return await prisma.eventAttendance.create({
-      data: {
-        eventId,
-        userId: parseInt(userId),
-        type,
-        status,
-      },
-    });
-  }
-};
-
-// Get stats about an event based on the current user preferences
 exports.getEventStats = async ({ eventId, userId }) => {
   if (!eventId || !userId) {
     throw new Error("Event ID and User ID are required");
@@ -338,63 +300,54 @@ exports.getEventStats = async ({ eventId, userId }) => {
   };
 };
 
-exports.createEvent = async (eventData) => {
+exports.createEvent = async ({ userId, eventData }) => {
   const event = await prisma.event.create({
-    data: eventData,
+    data: {
+      ...eventData,
+      createdBy: {
+        connect: { id: userId },
+      },
+    },
   });
 
   return event;
 };
 
-exports.updateEvent = async (id, eventData, userId) => {
-  const existingEvent = await prisma.event.findUnique({
-    where: { id },
+exports.updateEvent = async (eventId, updateData) => {
+  let record = await prisma.event.findUnique({
+    where: { id: eventId },
   });
-
-  if (!existingEvent) {
-    throw new AppError("Event not found", 404);
+  if (!record) {
+    return null
   }
-
-  if (existingEvent.userId !== userId) {
-    throw new AppError("You are not authorized to update this event", 403);
-  }
-
-  const updatedEvent = await prisma.event.update({
-    where: { id },
-    data: eventData,
+  return await prisma.event.update({
+    where: { id: eventId },
+    data: updateData,
   });
+};
 
-  return updatedEvent;
+exports.deleteEvent = async (eventId) => {
+    let record = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!record) {
+      return null;
+    }
+  return await prisma.event.delete({
+    where: { id: eventId },
+  });
 };
 
 exports.getUserEvents = async (userId) => {
-  const events = await prisma.event.findMany({
-    where: { userId },
-    orderBy: { dateTime: "asc" },
-  });
-
-  return events;
-};
-
-exports.deleteEvent = async (id, userId) => {
-  const existingEvent = await prisma.event.findUnique({
-    where: { id },
-  });
-
-  if (!existingEvent) {
-    throw new AppError("Event not found", 404);
-  }
-
-  if (existingEvent.userId !== userId) {
-    throw new AppError("You are not authorized to delete this event", 403);
-  }
-
-  await prisma.event.delete({
-    where: { id },
+  return await prisma.event.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 };
-
-
 
 exports.handleInteraction = async ({
   userId,
@@ -403,46 +356,46 @@ exports.handleInteraction = async ({
   isGoing,
   eventData,
 }) => {
-  const isUniEvent = eventData?.source === "uni" || !eventData;
-  let externalEventId = null;
 
-  if (!isUniEvent) {
+  const isUserCreated = eventData?.source === "uni" || !eventData;
 
-    if (
-      !eventData ||
-      !eventData.name ||
-      !eventData.description ||
-      !eventData.source
-    ) {
-      throw new Error(
-        "External event data must include name, description, and source"
-      );
-    }
 
-    // Check if the external event already exists
-    let externalEvent = await prisma.externalEvent.findFirst({
+  if (!isUserCreated && eventData) {
+    let event = await prisma.event.findFirst({
       where: {
-        id: eventId,
+        externalId: eventId,
       },
     });
 
     // If external event doesn't exist, create it
-    if (!externalEvent) {
-      externalEvent = await prisma.externalEvent.create({
+    if (!event) {
+      event = await prisma.event.create({
         data: {
-          id: eventId,
+          id: uuidv4(), // Generate a new internal ID
+          externalId: eventId, // Store the external ID
           name: eventData.name,
-          description: eventData.description,
+          description: eventData.description || "",
           source: eventData.source,
-          image: eventData.image || null,
-          location: eventData.location || null,
-          dateTime: eventData.dateTime ? new Date(eventData.dateTime) : null,
+          image: eventData.image || "",
+          location: eventData.location || "",
+          dateTime: eventData.dateTime
+            ? new Date(eventData.dateTime)
+            : new Date(),
+          ageMin: eventData.ageMin || null,
+          ageMax: eventData.ageMax || null,
+          ticketUrls: eventData.ticketUrls || [],
+          preferences: eventData.preferences || null,
+          // No userId or createdBy for external events
         },
       });
-      logger.info(`Created new external event: ${eventId}`);
-    }
 
-    externalEventId = externalEvent.id;
+
+      // Update eventId to use the internal ID for the attendance record
+      eventId = event.id;
+    } else {
+      // Use the internal ID for the attendance record
+      eventId = event.id;
+    }
   }
 
   // Find existing attendance record
@@ -481,7 +434,6 @@ exports.handleInteraction = async ({
         id: uuidv4(),
         eventId: eventId,
         userId: userId,
-        externalEventId: isUniEvent ? null : externalEventId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
       },
@@ -494,47 +446,54 @@ exports.handleInteraction = async ({
   return attendanceRecord;
 };
 
-
-exports.getUserInteractions = async (userId, filter) => {
-  // Build query conditions
-  const whereCondition = { userId };
-
-  if (filter === "liked") {
-    whereCondition.isLiked = true;
-  } else if (filter === "going") {
-    whereCondition.isGoing = true;
-  }
-
-  // Get attendance records with related event data
-  const attendanceRecords = await prisma.eventAttendance.findMany({
-    where: whereCondition,
-    include: {
-      externalEvent: true,
+exports.getUserEvents = async (userId) => {
+  // Fetch events created by the user
+  const events = await prisma.event.findMany({
+    where: {
+      userId: userId,
+      source: "uni", // Only user-created events
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  // For internal events, we need to fetch the event details separately
-  const internalEventIds = attendanceRecords
-    .filter((record) => !record.externalEventId)
-    .map((record) => record.eventId);
+  return events;
+};
 
-  const internalEvents =
-    internalEventIds.length > 0
-      ? await prisma.event.findMany({
-          where: {
-            id: { in: internalEventIds },
-          },
-        })
-      : [];
+exports.getUserInteractions = async (userId) => {
+  // Fetch all attendance records
+  const attendanceRecords = await prisma.eventAttendance.findMany({
+    where: { userId },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-  // Combine the data for response
-  const userEvents = attendanceRecords.map((record) => {
-    const eventDetails = record.externalEventId
-      ? record.externalEvent
-      : internalEvents.find((e) => e.id === record.eventId) || null;
+  // Collect all event IDs from attendance records
+  const eventIds = attendanceRecords.map((record) => record.eventId);
+
+  // Fetch all events in a single query
+  const events = eventIds.length
+    ? await prisma.event.findMany({
+        where: { id: { in: eventIds } },
+      })
+    : [];
+
+  // Combine attendance data with event data
+  return attendanceRecords.map((record) => {
+    const eventData = events.find((e) => e.id === record.eventId);
+
+    // Determine if this is a user-created event or external event
+    const isUserCreated = eventData?.source === "uni";
+
+    let filteredEvent = null;
+
+    if (eventData) {
+      // Remove fields we don't want to expose
+      const { preferences, createdAt, updatedAt, ...rest } = eventData;
+      filteredEvent = rest;
+    }
 
     return {
       interactionId: record.id,
@@ -542,25 +501,9 @@ exports.getUserInteractions = async (userId, filter) => {
       isLiked: record.isLiked,
       isGoing: record.isGoing,
       interactionDate: record.createdAt,
-      event: eventDetails,
+      event: filteredEvent,
+      isUserCreated: isUserCreated,
     };
   });
-
-  return userEvents;
 };
 
-exports.removeInteraction = async (userId, eventId) => {
-  // Delete the attendance record
-  const deleteResult = await prisma.eventAttendance.deleteMany({
-    where: {
-      eventId,
-      userId,
-    },
-  });
-
-  logger.info(
-    `Removed event interaction for user ${userId} and event ${eventId}. Records deleted: ${deleteResult.count}`
-  );
-
-  return;
-};
