@@ -1,0 +1,84 @@
+{
+    "interest": [
+        {
+            "category": "creativeArts",
+            "items": [
+                "Art",
+                "Photography",
+                "Content Creation",
+                "Movies",
+                "Anime",
+                "Reading",
+                "Writing",
+                "DIY/Crafts"
+            ]
+        },
+        {
+            "category": "foodDrink",
+            "items": [
+                "Cooking",
+                "Foodie",
+                "Coffee Enthusiast",
+                "Wine Tasting",
+                "Brunch Culture"
+            ]
+        },
+        {
+            "category": "fitnessWellness",
+            "items": [
+                "Fitness",
+                "Yoga",
+                "Hiking",
+                "Swimming",
+                "Tennis",
+                "Volleyball",
+                "Pickleball",
+                "Church",
+                "Dance"
+            ]
+        },
+        {
+            "category": "sportsGaming",
+            "items": [
+                "Basketball",
+                "Baseball",
+                "Hockey",
+                "Football",
+                "Soccer",
+                "Wrestling",
+                "Sports Betting",
+                "Video Games"
+            ]
+        },
+        {
+            "category": "lifestyleFashion",
+            "items": [
+                "Streetwear",
+                "Makeup",
+                "Travel",
+                "Astrology",
+                "Thrifting"
+            ]
+        },
+        {
+            "category": "outdoorAdventure",
+            "items": [
+                "Snowboarding",
+                "Skating",
+                "Fishing",
+                "Golf",
+                "Hiking",
+                "Camping"
+            ]
+        },
+        {
+            "category": "nightlifeMusic",
+            "items": [
+                "Live Music",
+                "Bar Hopping",
+                "Clubbing",
+                "Festival Culture"
+            ]
+        }
+    ]
+}
