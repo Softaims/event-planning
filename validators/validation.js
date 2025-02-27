@@ -474,11 +474,11 @@ const updatepreferencesValidations = [
     .optional()
     .custom((value) => {
       const allowedPlatforms = [
-        "Facebook",
-        "LinkedIn",
-        "Instagram",
-        "Twitter",
-        "Snapchat",
+        "facebook",
+        "linkedin",
+        "instagram",
+        "twitter",
+        "snapchat",
       ];
       Object.keys(value).forEach((platform) => {
         if (!allowedPlatforms.includes(platform)) {
