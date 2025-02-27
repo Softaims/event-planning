@@ -133,7 +133,7 @@ exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
     const user = await prisma.user.findFirst({
         where: {
             phoneVerificationToken: hashedOtp, // Check OTP match
-            phoneVerificationTokenExpires: { gte: new Date() }, // Not expired
+            // phoneVerificationTokenExpires: { gte: new Date() }, // Not expired
         },
     });
 
@@ -300,8 +300,8 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     const { password } = req.body;
     const hashedOtp = authService.hashToken(otp); // Hash OTP for security
 
-    if (!otp || !password) {
-        return next(new AppError('OTP and new password are required.', 401));
+    if (!password) {
+        return next(new AppError('New password are required.', 401));
     }
 
     const user = await prisma.user.findFirst({

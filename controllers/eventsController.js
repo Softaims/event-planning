@@ -108,21 +108,21 @@ exports.isUserGoing = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getEventStats = catchAsync(async (req, res, next) => {
+exports.getEventDetails = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
   const userId = req.user.id;
-  const eventStats = await eventService.getEventStats({
+  const eventDetails = await eventService.getEventDetails({
     eventId,
     userId,
   });
 
   res.status(200).json({
     status: "success",
-    message: "Event stats fetched successfully.",
-    data: { event: eventStats },
+    message: "Event Details fetched successfully.",
+    data: { event: eventDetails },
   });
 });
 
@@ -187,19 +187,19 @@ exports.getUserEventOverview = catchAsync(async (req, res, next) => {
 });
 
 exports.handleEventInteraction = catchAsync(async (req, res, next) => {
-  const { eventId, isLiked, isGoing, eventData } = req.body;
-
+  const { isLiked, isGoing, eventData } = req.body;
+  const { eventId } = req.params;
   const userId = req.user.id;
 
   // Validate input
   if (!eventId) {
     return next(new AppError("Event ID is required", 401));
   }
-if (isLiked === undefined && isGoing === undefined) {
-  return next(
-    new AppError("Either 'isLiked' or 'isGoing' must be provided.", 400)
-  );
-}
+  if (isLiked === undefined && isGoing === undefined) {
+    return next(
+      new AppError("Either 'isLiked' or 'isGoing' must be provided.", 400)
+    );
+  }
   // Check if isLiked and isGoing are boolean or undefined
   if (isLiked !== undefined && typeof isLiked !== "boolean") {
     return next(new AppError("isLiked must be a boolean value", 401));
@@ -209,7 +209,6 @@ if (isLiked === undefined && isGoing === undefined) {
     return next(new AppError("isGoing must be a boolean value", 401));
   }
 
-
   // Handle the interaction through the service
   const attendanceRecord = await eventService.handleInteraction({
     userId,
@@ -218,7 +217,6 @@ if (isLiked === undefined && isGoing === undefined) {
     isGoing,
     eventData,
   });
-
 
   res.status(200).json({
     status: "success",

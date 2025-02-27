@@ -32,6 +32,7 @@ model User {
   phoneVerificationTokenExpires DateTime?
   preferences                   Json?
   isRegistrationComplete        Boolean                   @default(false)
+  isProfilePublic               Boolean                   @default(true)
   lat                           Float?
   location                      Unsupported("geography")?
   long                          Float?

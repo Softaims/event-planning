@@ -9,6 +9,7 @@ const fs = require("fs");
 const s3Service = require("../utils/s3Service"); // S3 handling
 
 // Get Logged-in User's Profile
+// Get Logged-in User's Profile with Completion Percentage
 exports.getMe = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
@@ -18,26 +19,40 @@ exports.getMe = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found.", 404));
   }
 
+  const completionPercentage = userService.calculateProfileCompletion(user);
+
+  const userData = userDto(user);
+  userData.profileCompletionPercentage = completionPercentage;
+
   res.status(200).json({
     status: "success",
     message: "Profile fetched successfully.",
-    data: userDto(user),
+    data: userData,
   });
 });
-
 // Update Profile Controller
 exports.updateProfile = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
   const updateData = {};
 
-  // Extract fields
-  const { firstName, lastName, email, dob, pronouns, lat, long } = req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    dob,
+    pronouns,
+    lat,
+    preferences,
+    long,
+    isProfilePublic,
+  } = req.body;
 
   if (firstName) updateData.firstName = firstName;
   if (lastName) updateData.lastName = lastName;
   if (email) updateData.email = email;
   if (dob) updateData.dob = new Date(dob);
   if (pronouns) updateData.pronouns = pronouns;
+  if (preferences) updateData.preferences = preferences;
 
   if (lat !== undefined) {
     const parsedLat = parseFloat(lat);
@@ -51,6 +66,13 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
     if (isNaN(parsedLong))
       return next(new AppError("Invalid longitude format.", 400));
     updateData.long = parsedLong;
+  }
+
+  if (isProfilePublic !== undefined) {
+    updateData.isProfilePublic =
+      typeof isProfilePublic === "boolean"
+        ? isProfilePublic
+        : isProfilePublic === "true";
   }
 
   // Handle profile image upload if provided
@@ -89,6 +111,33 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "Profile updated successfully.",
-    data: updatedUser,
+    data: userDto(updatedUser),
+  });
+});
+// Get User Profile Controller
+exports.getUserProfile = catchAsync(async (req, res, next) => {
+  const requestedUserId = parseInt(req.params.userId);
+  const requestingUserId = req.user.id;
+
+  const user = await userService.getUserById(requestedUserId);
+
+  if (!user) {
+    return next(new AppError("User not found.", 401));
+  }
+
+  if (!user.isProfilePublic && requestingUserId !== requestedUserId) {
+    return next(new AppError("This profile is set to private.", 401));
+  }
+
+  const userProfile = await authService.findUserById(requestedUserId);
+
+  if (!userProfile) {
+    return next(new AppError("Profile details not found.", 401));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Profile fetched successfully.",
+    data: userDto(userProfile),
   });
 });

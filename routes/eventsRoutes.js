@@ -13,9 +13,9 @@ router.get(
   eventsController.getEventAttendance
 );
 router.get(
-  "/:eventId/stats",
+  "/:eventId/details",
   authMiddleware.protect,
-  eventsController.getEventStats
+  eventsController.getEventDetails
 );
 router.get(
   "/me",
@@ -24,7 +24,7 @@ router.get(
 );
 
 router.post(
-  "/interact",
+  "/interact/:eventId",
   authMiddleware.protect,
   eventsController.handleEventInteraction
 );
