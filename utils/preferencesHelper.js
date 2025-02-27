@@ -28,7 +28,7 @@ const getDefaultPreferences = () => ({
     favoriteArtists: [],
     favoritePlacesToGo: [],
     relationshipStatus: "",
-    favoriteSportsTeams: [] // Now a single array
+    favoriteSportsTeams: []
 });
 
 module.exports = { getDefaultPreferences };
