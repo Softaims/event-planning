@@ -197,7 +197,7 @@ exports.isUserGoing = async (eventId, userId) => {
   return { isGoing: attendance ? attendance.isGoing : false };
 };
 
-exports.getEventStats = async ({ eventId, userId }) => {
+exports.getEventDetails = async ({ eventId, userId }) => {
   if (!eventId || !userId) {
     throw new Error("Event ID and User ID are required");
   }

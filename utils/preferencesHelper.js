@@ -16,8 +16,11 @@ const getDefaultPreferences = () => ({
     musicGenre: "",
     zodiacSign: "",
     socialLinks: {
-        Facebook: "",
-        Instagram: ""
+        facebook: "",
+        instagram: "",
+        snapchat: "",
+        twitter: "",
+        linkedin : "",
     },
     collegeClubs: [],
     favoriteShows: [],
