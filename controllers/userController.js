@@ -119,7 +119,7 @@ exports.getUserProfile = catchAsync(async (req, res, next) => {
   const requestedUserId = parseInt(req.params.userId);
   const requestingUserId = req.user.id;
 
-  const user = await userService.getUserById(requestedUserId);
+  const user = await authService.findUserById(requestedUserId);
 
   if (!user) {
     return next(new AppError("User not found.", 401));

@@ -79,6 +79,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     ...latestFilteredEvents.map((event) => ({ ...dbEventDto(event) })),
     ...places.map((place) => ({ ...placeDto(place) })),
   ];
+  mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
   res.status(200).json({
     status: "success",
@@ -91,16 +92,28 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   });
 });
 
+
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
+  const userId = req.user.id;
+
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
-  const attendanceData = await eventService.getEventAttendance(eventId);
+
+  // Get full user data including preferences
+  const userData = await authService.findUserById(userId);
+
+  // Pass the current user data to getEventAttendance function
+  const attendanceData = await eventService.getEventAttendance(
+    eventId,
+    userData
+  );
+
   res.status(200).json({
     status: "success",
     message: "Attendance fetched successfully.",
-    date: { event: attendanceData },
+    data: { event: attendanceData },
   });
 });
 

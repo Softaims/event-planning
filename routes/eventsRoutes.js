@@ -38,7 +38,6 @@ router.post(
   eventsController.createEvent
 );
 
-
 router.patch(
   "/:eventId",
   authMiddleware.protect,
@@ -48,8 +47,10 @@ router.patch(
   eventsController.updateEvent
 );
 
-
-router.delete("/:eventId", authMiddleware.protect, eventsController.deleteEvent);
-
+router.delete(
+  "/:eventId",
+  authMiddleware.protect,
+  eventsController.deleteEvent
+);
 
 module.exports = router;
