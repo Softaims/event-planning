@@ -5,7 +5,7 @@ const { eventDto } = require("../dtos/eventDto");
 const { placeDto } = require("../dtos/placeDto");
 const { dbEventDto } = require("../dtos/dbEventDto");
 const eventService = require("../services/eventService");
-const userService = require("../services/userService");
+const authService = require("../services/authService");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 const fs = require("fs");
@@ -31,11 +31,11 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   if (isNaN(size) || size < 1) size = 10;
 
   const userId = req.user.id;
+  const userData = await authService.findUserById(userId);
 
   if (!latitude || !longitude) {
-    const user = await userService.getUserById(userId);
-    latitude = user?.lat;
-    longitude = user?.long;
+    latitude = userData?.lat;
+    longitude = userData?.long;
   }
 
   const [events, places, eventsFromDb] = await Promise.all([
@@ -59,16 +59,26 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       radius,
       size,
     }),
-    eventService.getLatestEvents(page, size),
+    eventService.getEventsFromDb(),
   ]);
+
+  const filteredEvents = userData?.preferences
+    ? await eventService.filterEventsByUserPreferences(
+        userData.preferences,
+        eventsFromDb
+      )
+    : eventsFromDb;
+
+  const latestFilteredEvents = filteredEvents
+    .filter((event) => event.createdAt)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice((page - 1) * size, page * size);
 
   const mergedResults = [
     ...events.map((event) => ({ ...eventDto(event) })),
-    ...eventsFromDb.map((event) => ({ ...dbEventDto(event) })),
+    ...latestFilteredEvents.map((event) => ({ ...dbEventDto(event) })),
     ...places.map((place) => ({ ...placeDto(place) })),
   ];
-
-  mergedResults.sort((a, b) => a.name.localeCompare(b.name));
 
   res.status(200).json({
     status: "success",
