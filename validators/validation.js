@@ -2,6 +2,7 @@ const { check } = require("express-validator");
 const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const constants = require("../constants");
 const emailValidator = require("email-validator");
+const moment = require("moment");
 
 const isValidEntry = (value, list) => {
   if (!Array.isArray(list)) return false; // Ensure list is an array
@@ -535,7 +536,21 @@ const authValidations = {
         return true;
       }),
 
-    check("dob").not().isEmpty().withMessage("Date of Birth is required."),
+    check("dob")
+      .not()
+      .isEmpty()
+      .withMessage("Date of Birth is required.")
+      .custom((value) => {
+        const dob = moment(value, "YYYY-MM-DD", true);
+        if (!dob.isValid()) {
+          throw new Error("Invalid date format. Use YYYY-MM-DD.");
+        }
+        const age = moment().diff(dob, "years");
+        if (age < 18) {
+          throw new Error("You must be at least 18 years old.");
+        }
+        return true;
+      }),
 
     check("pronouns")
       .not()

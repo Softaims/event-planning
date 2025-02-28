@@ -7,6 +7,7 @@ const logger = require("../utils/logger");
 const path = require("path");
 const fs = require("fs");
 const s3Service = require("../utils/s3Service"); // S3 handling
+const { calculateMatchPercentage } = require("../utils/calculateMatchPercentage ");
 
 // Get Logged-in User's Profile
 // Get Logged-in User's Profile with Completion Percentage
@@ -114,12 +115,12 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
     data: userDto(updatedUser),
   });
 });
-// Get User Profile Controller
+
 exports.getUserProfile = catchAsync(async (req, res, next) => {
   const requestedUserId = parseInt(req.params.userId);
   const requestingUserId = req.user.id;
 
-  const user = await authService.findUserById(requestedUserId);
+  const user = await userService.getUserById(requestedUserId);
 
   if (!user) {
     return next(new AppError("User not found.", 401));
@@ -129,12 +130,38 @@ exports.getUserProfile = catchAsync(async (req, res, next) => {
     return next(new AppError("This profile is set to private.", 401));
   }
 
+  // Get complete profile data for the requested user
   const userProfile = await authService.findUserById(requestedUserId);
 
   if (!userProfile) {
     return next(new AppError("Profile details not found.", 401));
   }
 
+  // Only calculate match percentage if not viewing your own profile
+  if (requestingUserId !== requestedUserId) {
+    // Get requesting user data to access their preferences
+    const requestingUser = await authService.findUserById(requestingUserId);
+    
+    // Calculate match percentage if both users have preferences
+    if (requestingUser.preferences && userProfile.preferences) {
+      const matchPercentage = calculateMatchPercentage(
+        requestingUser.preferences, 
+        userProfile.preferences
+      );
+      
+      // Add match percentage to the response
+      const profileWithMatch = userDto(userProfile);
+      profileWithMatch.matchPercentage = matchPercentage;
+      
+      return res.status(200).json({
+        status: "success",
+        message: "Profile fetched successfully.",
+        data: profileWithMatch,
+      });
+    }
+  }
+
+  // Default response without match percentage
   res.status(200).json({
     status: "success",
     message: "Profile fetched successfully.",
