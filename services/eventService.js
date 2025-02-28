@@ -4,8 +4,10 @@ const logger = require("../utils/logger");
 const stopword = require("stopword");
 const { prisma } = require("../db");
 const { v4: uuidv4 } = require("uuid");
-const GOOGLE_PLACES_URL =
+const GOOGLE_PLACES_TEXT_SEARCH_URL =
   "https://maps.googleapis.com/maps/api/place/textsearch/json";
+const GOOGLE_PLACES_NEARBY_SEARCH_URL =
+  "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 
 const TICKET_MASTER_URL = "https://app.ticketmaster.com/discovery/v2/events";
 
@@ -57,12 +59,11 @@ const calculateInterestMatch = (currentUserPrefs, attendeePrefs) => {
 };
 
 const filterQuery = (query) => {
-  if (!query) return "";
-  if (Array.isArray(query)) {
-    return stopword.removeStopwords(query.map((word) => word.trim())).join(" ");
-  }
+  if (!query || typeof query !== "string") return "";
+
+  // Split by space (assuming words are space-separated), trim, remove stopwords, and rejoin
   return stopword
-    .removeStopwords(query.split(",").map((word) => word.trim()))
+    .removeStopwords(query.split(" ").map((word) => word.trim()))
     .join(" ");
 };
 
@@ -89,7 +90,6 @@ exports.fetchTicketmasterEvents = async ({
   try {
     // const filteredQuery = filterQuery(query);
     const formattedEventCategory = formatMultipleParams(eventCategory);
-   
 
     const response = await axios.get(TICKET_MASTER_URL, {
       params: {
@@ -113,28 +113,39 @@ exports.fetchTicketmasterEvents = async ({
 exports.fetchGooglePlaces = async ({
   query,
   latitude,
-  page,
   longitude,
   placeCategory,
   city,
-  radius,
-  size,
+  radius = 5000,
+  size = 10,
 }) => {
   try {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
       throw new AppError("Google Places API key is missing", 500);
     }
-    let url = `${GOOGLE_PLACES_URL}?key=${apiKey}`;
-    if (query) url += `&query=${encodeURIComponent(query)}`;
-    if (city) {
-      url += ` in${encodeURIComponent(city)}`;
+
+    if (!latitude || !longitude) {
+      throw new AppError("Latitude and Longitude are required", 401);
     }
 
-    if (latitude && longitude) {
-      url += `&location=${latitude},${longitude}&radius=${radius || 5000}`;
+    let url;
+
+    if (query) {
+
+      url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
+        query
+      )}&location=${latitude},${longitude}&radius=${radius}`;
+      if (city) url += ` in ${encodeURIComponent(city)}`;
+    } else {
+
+      url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
     }
-    if (placeCategory) url += `&type=${encodeURIComponent(placeCategory)}`;
+
+    if (placeCategory) {
+      url += `&type=${encodeURIComponent(placeCategory)}`;
+    }
+
 
     const response = await axios.get(url);
 
@@ -143,8 +154,6 @@ exports.fetchGooglePlaces = async ({
       return [];
     }
 
-    logger.info("Google Places API results:", response.data.results.length);
-
     return response.data.results.slice(0, size);
   } catch (error) {
     logger.error("Error fetching Google Places data:", error);
@@ -152,30 +161,7 @@ exports.fetchGooglePlaces = async ({
   }
 };
 
-
-exports.getEventAttendance = async (eventId) => {
-  if (!eventId) throw new Error("Event ID is required");
-
-  const attendance = await prisma.eventAttendance.findMany({
-    where: {
-      eventId,
-      isGoing: true,
-    },
-    include: { user: true },
-  });
-
-  return {
-    totalAttendees: attendance.length,
-    attendees: attendance.map((a) => ({
-      userId: a.userId,
-      name: `${a.user.firstName} ${a.user.lastName}`,
-      profileImage: a.user.profileImage,
-    })),
-  };
-};
-
 exports.getEventsFromDb = async () => {
-
   return await prisma.event.findMany({
     where: {
       source: "uni",
@@ -315,7 +301,7 @@ exports.updateEvent = async (eventId, updateData) => {
     where: { id: eventId },
   });
   if (!record) {
-    return null
+    return null;
   }
   return await prisma.event.update({
     where: { id: eventId },
@@ -324,12 +310,12 @@ exports.updateEvent = async (eventId, updateData) => {
 };
 
 exports.deleteEvent = async (eventId) => {
-    let record = await prisma.event.findUnique({
-      where: { id: eventId },
-    });
-    if (!record) {
-      return null;
-    }
+  let record = await prisma.event.findUnique({
+    where: { id: eventId },
+  });
+  if (!record) {
+    return null;
+  }
   return await prisma.event.delete({
     where: { id: eventId },
   });
@@ -353,9 +339,7 @@ exports.handleInteraction = async ({
   isGoing,
   eventData,
 }) => {
-
   const isUserCreated = eventData?.source === "uni" || !eventData;
-
 
   if (!isUserCreated && eventData) {
     let event = await prisma.event.findFirst({
@@ -385,7 +369,6 @@ exports.handleInteraction = async ({
           // No userId or createdBy for external events
         },
       });
-
 
       // Update eventId to use the internal ID for the attendance record
       eventId = event.id;
@@ -504,48 +487,467 @@ exports.getUserInteractions = async (userId) => {
   });
 };
 
+exports.filterEventsByUserPreferences = async (userPreferences, events) => {
+  if (!events || events.length === 0) {
+    return [];
+  }
 
-exports.filterEventsByUserPreferences =async (userPreferences, events) => {
-  if (!userPreferences || !events || events.length === 0) return [];
+  // Calculate relevance score for each event based on user preferences
+  const scoredEvents = events.map((event) => {
+    let score = 0;
+    const matchedPreferences = [];
 
-  return events.filter((event) => {
-    let isMatch = false;
+    // Check if event has preferences
+    if (!event.preferences) {
+      return { event, score: 0, matchedPreferences };
+    }
 
-    // ✅ Match by interests
-    if (userPreferences.interests && event.category) {
-      Object.values(userPreferences.interests).forEach((interestList) => {
-        if (interestList.includes(event.category)) {
-          isMatch = true;
+    // Match interests categories
+    if (userPreferences.interests && event.preferences.interests) {
+      Object.keys(userPreferences.interests).forEach((category) => {
+        const userInterests = userPreferences.interests[category];
+
+        if (userInterests && userInterests.length > 0) {
+          // Check if the event has matching interests in this category
+          const eventInterests = event.preferences.interests[category] || [];
+
+          userInterests.forEach((interest) => {
+            if (eventInterests.includes(interest)) {
+              score += 2; // Higher weight for direct interest match
+              matchedPreferences.push(`${category}: ${interest}`);
+            }
+          });
         }
       });
     }
 
-    // ✅ Match by music genre
+    // Match music genre
     if (
       userPreferences.musicGenre &&
-      event.musicGenre === userPreferences.musicGenre
+      event.preferences.musicGenre &&
+      event.preferences.musicGenre === userPreferences.musicGenre
     ) {
-      isMatch = true;
+      score += 3;
+      matchedPreferences.push(`Music: ${userPreferences.musicGenre}`);
     }
 
-    // ✅ Match by favorite artists
-    if (userPreferences.favoriteArtists && event.artist) {
-      userPreferences.favoriteArtists.forEach((artist) => {
-        if (event.artist.includes(artist)) {
-          isMatch = true;
-        }
-      });
+    // Match college
+    if (
+      userPreferences.college &&
+      event.preferences.college &&
+      event.preferences.college === userPreferences.college
+    ) {
+      score += 3;
+      matchedPreferences.push(`College: ${userPreferences.college}`);
     }
 
-    // ✅ Match by favorite places
-    if (userPreferences.favoritePlacesToGo && event.venue) {
-      userPreferences.favoritePlacesToGo.forEach((place) => {
-        if (event.venue.includes(place)) {
-          isMatch = true;
-        }
-      });
+    // Match college clubs
+    if (
+      userPreferences.collegeClubs &&
+      userPreferences.collegeClubs.length > 0 &&
+      event.preferences.collegeClubs
+    ) {
+      const matchingClubs = userPreferences.collegeClubs.filter((club) =>
+        event.preferences.collegeClubs.includes(club)
+      );
+
+      if (matchingClubs.length > 0) {
+        score += matchingClubs.length;
+        matchedPreferences.push(`Clubs: ${matchingClubs.join(", ")}`);
+      }
     }
 
-    return isMatch;
+    // Match favorite artists
+    if (
+      userPreferences.favoriteArtists &&
+      userPreferences.favoriteArtists.length > 0 &&
+      event.preferences.favoriteArtists
+    ) {
+      const matchingArtists = userPreferences.favoriteArtists.filter((artist) =>
+        event.preferences.favoriteArtists.includes(artist)
+      );
+
+      if (matchingArtists.length > 0) {
+        score += matchingArtists.length * 2; // Higher weight for artist matches
+        matchedPreferences.push(`Artists: ${matchingArtists.join(", ")}`);
+      }
+    }
+
+    // Match favorite sports teams
+    if (
+      userPreferences.favoriteSportsTeams &&
+      userPreferences.favoriteSportsTeams.length > 0 &&
+      event.preferences.favoriteSportsTeams
+    ) {
+      const matchingTeams = userPreferences.favoriteSportsTeams.filter((team) =>
+        event.preferences.favoriteSportsTeams.includes(team)
+      );
+
+      if (matchingTeams.length > 0) {
+        score += matchingTeams.length * 2;
+        matchedPreferences.push(`Teams: ${matchingTeams.join(", ")}`);
+      }
+    }
+
+    // Major might be relevant for academic events
+    if (
+      userPreferences.major &&
+      event.preferences.major &&
+      event.preferences.major === userPreferences.major
+    ) {
+      score += 2;
+      matchedPreferences.push(`Major: ${userPreferences.major}`);
+    }
+
+    // Return the event with its calculated relevance score
+    return {
+      event,
+      score,
+      matchedPreferences,
+    };
   });
+
+  // Divide events into those with scores > 0 and those with scores = 0
+  const relevantEvents = [];
+  const irrelevantEvents = [];
+
+  scoredEvents.forEach((item) => {
+    if (item.score > 0) {
+      relevantEvents.push({
+        ...item.event,
+        relevanceScore: item.score,
+        matchedPreferences: item.matchedPreferences,
+      });
+    } else {
+      irrelevantEvents.push({
+        ...item.event,
+        relevanceScore: 0,
+        matchedPreferences: [],
+      });
+    }
+  });
+
+  // Sort relevant events by score (highest first)
+  relevantEvents.sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+  // Return relevant events first, followed by irrelevant events
+  // This preserves the total number of events for pagination
+  return [...relevantEvents, ...irrelevantEvents];
 };
+
+const calculateMatchPercentage = (currentUserPrefs, otherUserPrefs) => {
+  let totalScore = 0;
+  let maxPossibleScore = 0;
+
+  // Weights for different categories (adjust as needed)
+  const weights = {
+    major: 15,
+    college: 20,
+    interests: 25,
+    musicGenre: 10,
+    zodiacSign: 5,
+    collegeClubs: 10,
+    favoriteShows: 5,
+    favoriteArtists: 5,
+    favoritePlacesToGo: 5,
+    relationshipStatus: 0, // Not using for matching
+    favoriteSportsTeams: 5,
+  };
+
+  // Calculate major match
+  if (
+    currentUserPrefs.major &&
+    otherUserPrefs.major &&
+    currentUserPrefs.major.toLowerCase() === otherUserPrefs.major.toLowerCase()
+  ) {
+    totalScore += weights.major;
+  }
+  maxPossibleScore += weights.major;
+
+  // Calculate college match
+  if (
+    currentUserPrefs.college &&
+    otherUserPrefs.college &&
+    currentUserPrefs.college.toLowerCase() ===
+      otherUserPrefs.college.toLowerCase()
+  ) {
+    totalScore += weights.college;
+  }
+  maxPossibleScore += weights.college;
+
+  // Calculate interests match (considering the 3 category limit)
+  if (currentUserPrefs.interests && otherUserPrefs.interests) {
+    // Get categories that have items for current user
+    const currentUserCategories = [];
+    for (const category in currentUserPrefs.interests) {
+      if (
+        Array.isArray(currentUserPrefs.interests[category]) &&
+        currentUserPrefs.interests[category].length > 0
+      ) {
+        currentUserCategories.push(category);
+      }
+    }
+
+    // Get categories that have items for other user
+    const otherUserCategories = [];
+    for (const category in otherUserPrefs.interests) {
+      if (
+        Array.isArray(otherUserPrefs.interests[category]) &&
+        otherUserPrefs.interests[category].length > 0
+      ) {
+        otherUserCategories.push(category);
+      }
+    }
+
+    // Calculate overlap between categories
+    const commonCategories = currentUserCategories.filter((cat) =>
+      otherUserCategories.includes(cat)
+    );
+    const categoryMatchScore =
+      (commonCategories.length /
+        Math.max(1, Math.min(3, currentUserCategories.length))) *
+      (weights.interests * 0.4);
+    totalScore += categoryMatchScore;
+
+    // Calculate specific interest matches within common categories
+    let interestMatchScore = 0;
+    for (const category of commonCategories) {
+      const currentUserInterests = currentUserPrefs.interests[category] || [];
+      const otherUserInterests = otherUserPrefs.interests[category] || [];
+
+      const commonInterests = currentUserInterests.filter((interest) =>
+        otherUserInterests.some(
+          (i) => i.toLowerCase() === interest.toLowerCase()
+        )
+      );
+
+      if (currentUserInterests.length > 0 && otherUserInterests.length > 0) {
+        const categoryScore =
+          (commonInterests.length /
+            Math.max(
+              1,
+              Math.min(currentUserInterests.length, otherUserInterests.length)
+            )) *
+          ((weights.interests * 0.6) / Math.max(1, commonCategories.length));
+        interestMatchScore += categoryScore;
+      }
+    }
+
+    totalScore += interestMatchScore;
+  }
+  maxPossibleScore += weights.interests;
+
+  // Calculate music genre match
+  if (
+    currentUserPrefs.musicGenre &&
+    otherUserPrefs.musicGenre &&
+    currentUserPrefs.musicGenre.toLowerCase() ===
+      otherUserPrefs.musicGenre.toLowerCase()
+  ) {
+    totalScore += weights.musicGenre;
+  }
+  maxPossibleScore += weights.musicGenre;
+
+  // Calculate zodiac sign match
+  if (
+    currentUserPrefs.zodiacSign &&
+    otherUserPrefs.zodiacSign &&
+    currentUserPrefs.zodiacSign.toLowerCase() ===
+      otherUserPrefs.zodiacSign.toLowerCase()
+  ) {
+    totalScore += weights.zodiacSign;
+  }
+  maxPossibleScore += weights.zodiacSign;
+
+  // Calculate college clubs match
+  if (
+    currentUserPrefs.collegeClubs &&
+    otherUserPrefs.collegeClubs &&
+    currentUserPrefs.collegeClubs.length > 0 &&
+    otherUserPrefs.collegeClubs.length > 0
+  ) {
+    const commonClubs = currentUserPrefs.collegeClubs.filter((club) =>
+      otherUserPrefs.collegeClubs.some(
+        (c) => c.toLowerCase() === club.toLowerCase()
+      )
+    );
+
+    const clubMatchScore =
+      (commonClubs.length /
+        Math.max(
+          1,
+          Math.min(
+            currentUserPrefs.collegeClubs.length,
+            otherUserPrefs.collegeClubs.length
+          )
+        )) *
+      weights.collegeClubs;
+    totalScore += clubMatchScore;
+  }
+  maxPossibleScore += weights.collegeClubs;
+
+  // Calculate favorite shows match
+  if (
+    currentUserPrefs.favoriteShows &&
+    otherUserPrefs.favoriteShows &&
+    currentUserPrefs.favoriteShows.length > 0 &&
+    otherUserPrefs.favoriteShows.length > 0
+  ) {
+    const commonShows = currentUserPrefs.favoriteShows.filter((show) =>
+      otherUserPrefs.favoriteShows.some(
+        (s) => s.toLowerCase() === show.toLowerCase()
+      )
+    );
+
+    const showMatchScore =
+      (commonShows.length /
+        Math.max(
+          1,
+          Math.min(
+            currentUserPrefs.favoriteShows.length,
+            otherUserPrefs.favoriteShows.length
+          )
+        )) *
+      weights.favoriteShows;
+    totalScore += showMatchScore;
+  }
+  maxPossibleScore += weights.favoriteShows;
+
+  // Calculate favorite artists match
+  if (
+    currentUserPrefs.favoriteArtists &&
+    otherUserPrefs.favoriteArtists &&
+    currentUserPrefs.favoriteArtists.length > 0 &&
+    otherUserPrefs.favoriteArtists.length > 0
+  ) {
+    const commonArtists = currentUserPrefs.favoriteArtists.filter((artist) =>
+      otherUserPrefs.favoriteArtists.some(
+        (a) => a.toLowerCase() === artist.toLowerCase()
+      )
+    );
+
+    const artistMatchScore =
+      (commonArtists.length /
+        Math.max(
+          1,
+          Math.min(
+            currentUserPrefs.favoriteArtists.length,
+            otherUserPrefs.favoriteArtists.length
+          )
+        )) *
+      weights.favoriteArtists;
+    totalScore += artistMatchScore;
+  }
+  maxPossibleScore += weights.favoriteArtists;
+
+  // Calculate favorite places match
+  if (
+    currentUserPrefs.favoritePlacesToGo &&
+    otherUserPrefs.favoritePlacesToGo &&
+    currentUserPrefs.favoritePlacesToGo.length > 0 &&
+    otherUserPrefs.favoritePlacesToGo.length > 0
+  ) {
+    const commonPlaces = currentUserPrefs.favoritePlacesToGo.filter((place) =>
+      otherUserPrefs.favoritePlacesToGo.some(
+        (p) => p.toLowerCase() === place.toLowerCase()
+      )
+    );
+
+    const placeMatchScore =
+      (commonPlaces.length /
+        Math.max(
+          1,
+          Math.min(
+            currentUserPrefs.favoritePlacesToGo.length,
+            otherUserPrefs.favoritePlacesToGo.length
+          )
+        )) *
+      weights.favoritePlacesToGo;
+    totalScore += placeMatchScore;
+  }
+  maxPossibleScore += weights.favoritePlacesToGo;
+
+  // Calculate favorite sports teams match
+  if (
+    currentUserPrefs.favoriteSportsTeams &&
+    otherUserPrefs.favoriteSportsTeams &&
+    currentUserPrefs.favoriteSportsTeams.length > 0 &&
+    otherUserPrefs.favoriteSportsTeams.length > 0
+  ) {
+    const commonTeams = currentUserPrefs.favoriteSportsTeams.filter((team) =>
+      otherUserPrefs.favoriteSportsTeams.some(
+        (t) => t.toLowerCase() === team.toLowerCase()
+      )
+    );
+
+    const teamMatchScore =
+      (commonTeams.length /
+        Math.max(
+          1,
+          Math.min(
+            currentUserPrefs.favoriteSportsTeams.length,
+            otherUserPrefs.favoriteSportsTeams.length
+          )
+        )) *
+      weights.favoriteSportsTeams;
+    totalScore += teamMatchScore;
+  }
+  maxPossibleScore += weights.favoriteSportsTeams;
+
+  // Calculate final percentage
+  return Math.round((totalScore / maxPossibleScore) * 100);
+};
+
+
+exports.getEventAttendance = async (eventId, currentUser) => {
+  if (!eventId) throw new Error("Event ID is required");
+
+  // Fetch all attendees who are going to the event
+  const attendance = await prisma.eventAttendance.findMany({
+    where: {
+      eventId,
+      isGoing: true,
+    },
+    include: {
+      user: true, // This should include preferences if they're already available on the user object
+    },
+  });
+
+  // Get current user's preferences directly from the user object
+  const currentUserPrefs = currentUser.preferences;
+
+  // If current user has no preferences, we'll still show attendees but without match percentages
+  const attendeesWithMatches = attendance.map((a) => {
+    const attendeeData = {
+      userId: a.userId,
+      name: `${a.user.firstName} ${a.user.lastName}`,
+      profileImage: a.user.profileImage,
+    };
+
+    // Skip calculating match for the current user with themselves
+    if (a.userId === currentUser.id) {
+      return attendeeData;
+    }
+
+    // Calculate match percentage if both users have preferences
+    if (currentUserPrefs && a.user.preferences) {
+      const matchPercentage = calculateMatchPercentage(
+        currentUserPrefs,
+        a.user.preferences
+      );
+      return {
+        ...attendeeData,
+        matchPercentage,
+      };
+    }
+
+    // Return attendee data without match percentage if preferences are missing
+    return attendeeData;
+  });
+
+  return {
+    totalAttendees: attendance.length,
+    attendees: attendeesWithMatches,
+  };
+};
+
