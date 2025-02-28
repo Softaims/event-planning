@@ -174,8 +174,7 @@ exports.getEventAttendance = async (eventId) => {
   };
 };
 
-exports.getLatestEvents = async (page = 1, size = 10) => {
-  const skip = (page - 1) * size;
+exports.getEventsFromDb = async () => {
 
   return await prisma.event.findMany({
     where: {
@@ -184,8 +183,6 @@ exports.getLatestEvents = async (page = 1, size = 10) => {
     orderBy: {
       createdAt: "desc",
     },
-    skip,
-    take: size,
   });
 };
 
@@ -507,3 +504,48 @@ exports.getUserInteractions = async (userId) => {
   });
 };
 
+
+exports.filterEventsByUserPreferences =async (userPreferences, events) => {
+  if (!userPreferences || !events || events.length === 0) return [];
+
+  return events.filter((event) => {
+    let isMatch = false;
+
+    // ✅ Match by interests
+    if (userPreferences.interests && event.category) {
+      Object.values(userPreferences.interests).forEach((interestList) => {
+        if (interestList.includes(event.category)) {
+          isMatch = true;
+        }
+      });
+    }
+
+    // ✅ Match by music genre
+    if (
+      userPreferences.musicGenre &&
+      event.musicGenre === userPreferences.musicGenre
+    ) {
+      isMatch = true;
+    }
+
+    // ✅ Match by favorite artists
+    if (userPreferences.favoriteArtists && event.artist) {
+      userPreferences.favoriteArtists.forEach((artist) => {
+        if (event.artist.includes(artist)) {
+          isMatch = true;
+        }
+      });
+    }
+
+    // ✅ Match by favorite places
+    if (userPreferences.favoritePlacesToGo && event.venue) {
+      userPreferences.favoritePlacesToGo.forEach((place) => {
+        if (event.venue.includes(place)) {
+          isMatch = true;
+        }
+      });
+    }
+
+    return isMatch;
+  });
+};

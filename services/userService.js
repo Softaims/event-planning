@@ -10,7 +10,6 @@ exports.getUserById = async (userId) => {
   });
 };
 
-
 exports.updateUser = async (userId, updateData) => {
   return await prisma.user.update({
     where: { id: userId },
@@ -24,8 +23,6 @@ exports.updateProfileVisibility = async (userId, visibility) => {
     data: { isProfilePublic: visibility },
   });
 };
-
-
 
 exports.calculateProfileCompletion = (user) => {
   const requiredPersonalFields = [
@@ -55,9 +52,15 @@ exports.calculateProfileCompletion = (user) => {
   ];
 
   const socialFields = [
-    "preferences.socialLinks.Facebook",
-    "preferences.socialLinks.Instagram",
+    "preferences.socialLinks.facebook",
+    "preferences.socialLinks.instagram",
+    "preferences.socialLinks.snapchat",
+    "preferences.socialLinks.linkedin",
+    "preferences.socialLinks.twitter",
   ];
+
+  // Number of required interest categories
+  const requiredInterestCategoryCount = 3;
 
   let completedFields = 0;
   const totalFields =
@@ -65,7 +68,7 @@ exports.calculateProfileCompletion = (user) => {
     preferenceFields.length +
     arrayFields.length +
     socialFields.length +
-    1; 
+    1; // +1 for all interest categories as a group
 
   // Check personal fields
   requiredPersonalFields.forEach((field) => {
@@ -90,18 +93,25 @@ exports.calculateProfileCompletion = (user) => {
     if (value && value !== "") completedFields++;
   });
 
-  // Special handling for interests object
-  if (
-    user.preferences &&
-    user.preferences.interests &&
-    typeof user.preferences.interests === "object"
-  ) {
-    // Check if any category has at least one interest
-    const hasInterests = Object.values(user.preferences.interests).some(
-      (category) => Array.isArray(category) && category.length > 0
-    );
+  // Check for at least 3 interest categories with content
+  if (user.preferences && user.preferences.interests) {
+    // Count categories with at least one interest
+    let filledCategoriesCount = 0;
 
-    if (hasInterests) completedFields++;
+    // Loop through all categories in the interests object
+    Object.keys(user.preferences.interests).forEach((category) => {
+      if (
+        Array.isArray(user.preferences.interests[category]) &&
+        user.preferences.interests[category].length > 0
+      ) {
+        filledCategoriesCount++;
+      }
+    });
+
+    // Count as complete only if there are at least 3 categories with content
+    if (filledCategoriesCount >= requiredInterestCategoryCount) {
+      completedFields++;
+    }
   }
 
   // Check array fields (at least one item counts as completed)
@@ -143,7 +153,3 @@ exports.calculateProfileCompletion = (user) => {
   // Calculate percentage
   return Math.round((completedFields / totalFields) * 100);
 };
-
-
-
-
