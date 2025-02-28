@@ -3,82 +3,86 @@
     {
       "category": "CREATIVE & ARTS",
       "items": [
-        "Art 🎨",
-        "Photography 📸",
-        "Content Creation 🤳",
-        "Movies 🎥",
-        "Anime 🦸",
-        "Reading 📚",
-        "Writing ✍️",
-        "DIY/Crafts 🛠️"
+        "🎨 Art",
+        "📸 Photography",
+        "🤳 Content Creation",
+        "🎥 Movies",
+        "🦸 Anime",
+        "📚 Reading",
+        "✍️ Writing",
+        "🛠️ DIY/Crafts"
       ]
     },
     {
       "category": "FOOD & DRINK",
       "items": [
-        "Cooking 👨‍🍳",
-        "Foodie 🌯",
-        "Coffee Enthusiast ☕️",
-        "Wine Tasting 🍷",
-        "Brunch Culture 🥂"
+        "👨‍🍳 Cooking",
+        "🌯 Foodie",
+        "☕️ Coffee Enthusiast",
+        "🍷 Wine Tasting",
+        "🥂 Brunch Culture"
       ]
     },
     {
       "category": "FITNESS & WELLNESS",
       "items": [
-        "Fitness 🏋️‍♂️",
-        "Yoga 🧘",
-        "Hiking 🥾",
-        "Swimming 🏊",
-        "Tennis 🎾",
-        "Volleyball 🏐",
-        "Pickleball 🏓",
-        "Church ⛪️",
-        "Dance 💃"
+        "🏋️‍♂️ Fitness",
+        "🧘 Yoga",
+        "🥾 Hiking",
+        "🏊 Swimming",
+        "🎾 Tennis",
+        "🏐 Volleyball",
+        "🏓 Pickleball",
+        "⛪️ Church",
+        "💃 Dance"
       ]
     },
     {
       "category": "SPORTS & GAMING",
       "items": [
-        "Basketball 🏀",
-        "Baseball ⚾️",
-        "Hockey 🏒",
-        "Football 🏈",
-        "Soccer ⚽️",
-        "Wrestling 🤼",
-        "Sports Betting 🎰",
-        "Video Games 🎮"
+        "🏀 Basketball",
+        "⚾️ Baseball",
+        "🏒 Hockey",
+        "🏈 Football",
+        "⚽️ Soccer",
+        "🤼 Wrestling",
+        "🎰 Sports Betting",
+        "🎮 Video Games"
       ]
     },
     {
       "category": "LIFESTYLE & FASHION",
       "items": [
-        "Streetwear 👟",
-        "Makeup 💄",
-        "Travel ✈️",
-        "Astrology ♊️",
-        "Thrifting 👖"
+        "👟 Streetwear",
+        "💄 Makeup",
+        "✈️ Travel",
+        "♊️ Astrology",
+        "👖 Thrifting"
       ]
     },
     {
       "category": "OUTDOOR & ADVENTURE",
       "items": [
-        "Snowboarding 🏂",
-        "Skating 🛹",
-        "Fishing 🎣",
-        "Golf ⛳️",
-        "Hiking 🥾",
-        "Camping ⛺️"
+        "🏂 Snowboarding",
+        "🛹 Skating",
+        "🎣 Fishing",
+        "⛳️ Golf",
+        "🥾 Hiking",
+        "⛺️ Camping"
       ]
     },
     {
       "category": "NIGHTLIFE & MUSIC",
       "items": [
-        "Live Music 🎤",
-        "Bar Hopping 🍾",
-        "Clubbing 🪩",
-        "Festival Culture 🎪"
+        "🎤 Live Music",
+        "🍾 Bar Hopping",
+        "🪩 Clubbing",
+        "🎪 Festival Culture"
       ]
+    },
+    {
+      "category": "TECH & DIGITAL",
+      "items": ["⌨️ Coding", "🤑 Crypto/NFTs", "📉 Startups"]
     }
   ]
 }
