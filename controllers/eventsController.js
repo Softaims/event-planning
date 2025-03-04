@@ -92,7 +92,6 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   });
 });
 
-
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
   const userId = req.user.id;
@@ -160,18 +159,19 @@ exports.createEvent = catchAsync(async (req, res, next) => {
   let imageUrl = null;
   // Handle image upload
   if (req.file) {
-    const fileName = `event-${eventData.name}-${Date.now()}.jpg`;
+    const eventNameSanitized = req.body.name.replace(/[^a-zA-Z0-9-_ ]/g, ""); // Remove invalid characters
+    const fileName = `event-${eventNameSanitized}-${Date.now()}.jpg`;
     const fileBuffer = req.file.buffer;
 
     if (process.env.NODE_ENV === "development") {
-      const localDir = path.join(__dirname, "../public/images/events");
+      const localDir = path.join(__dirname, "../public/images");
       if (!fs.existsSync(localDir)) {
         fs.mkdirSync(localDir, { recursive: true });
       }
 
       const localPath = path.join(localDir, fileName);
       fs.writeFileSync(localPath, fileBuffer);
-      imageUrl = `/public/images/events/${fileName}`;
+      imageUrl = `/public/images/${fileName}`;
       logger.info(`Event image stored locally: ${imageUrl}`);
     } else {
       imageUrl = await s3Service.uploadToS3(fileBuffer, fileName, "image");

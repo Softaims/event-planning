@@ -10,7 +10,6 @@ const s3Service = require("../utils/s3Service"); // S3 handling
 const { calculateMatchPercentage } = require("../utils/calculateMatchPercentage ");
 
 // Get Logged-in User's Profile
-// Get Logged-in User's Profile with Completion Percentage
 exports.getMe = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
