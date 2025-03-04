@@ -12,6 +12,198 @@ const isValidEntry = (value, list) => {
     .map((item) => item.toLowerCase().trim())
     .includes(value.toLowerCase().trim());
 };
+const createEventPreferencesValidations = (isRequired = true) => {
+  // Helper to conditionally apply optional() based on isRequired parameter
+  const applyOptional = (validation) => {
+    return isRequired ? validation : validation.optional();
+  };
+
+  return [
+    applyOptional(
+      check("preferences")
+        .exists()
+        .withMessage("Preferences JSON is required.")
+        .custom((value) => {
+          if (typeof value !== "object" || value === null) {
+            throw new Error("Preferences must be a valid JSON object.");
+          }
+
+          // Required preference fields
+          const requiredKeys = [
+            "major",
+            "college",
+            "interests",
+            "musicGenre",
+            "zodiacSign",
+            "collegeClubs",
+            "favoriteShows",
+            "favoriteArtists",
+            "favoritePlacesToGo",
+            "favoriteSportsTeams",
+          ];
+
+          const missingKeys = [];
+
+          requiredKeys.forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(value, key)) {
+              missingKeys.push(key); // 🔴 Only add missing keys (don't check empty values)
+            }
+          });
+
+          if (missingKeys.length > 0) {
+            console.error(
+              `🚨 Missing preference fields: ${missingKeys.join(", ")}`
+            );
+            throw new Error(
+              `Missing preference fields: ${missingKeys.join(", ")}`
+            );
+          }
+
+          return true;
+        })
+    ),
+
+    check("preferences.musicGenre")
+      .optional()
+      .custom((value) => {
+        if (!isValidEntry(value, constants.musicGenres)) {
+          throw new Error("Invalid genre selected.");
+        }
+        return true;
+      }),
+
+    check("preferences.interests")
+      .optional()
+      .custom((value) => {
+        if (!value || typeof value !== "object") {
+          throw new Error("Interests must be a valid JSON object.");
+        }
+
+        let totalInterests = 0; // Counter for total selected interests
+
+        Object.keys(value).forEach((category) => {
+          if (!constants.interests.hasOwnProperty(category)) {
+            throw new Error(`Invalid interest category: ${category}`);
+          }
+
+          const interestsArray = Array.isArray(value[category])
+            ? value[category]
+            : []; // Ensure it's always an array
+
+          totalInterests += interestsArray.length; // Count total interests
+
+          interestsArray.forEach((interest) => {
+            if (!constants.interests[category].includes(interest)) {
+              throw new Error(
+                `Invalid interest '${interest}' in category '${category}'`
+              );
+            }
+          });
+        });
+
+        // ✅ Ensure total interests across all categories is **maximum 3**
+        if (totalInterests > 3) {
+          throw new Error(
+            `You can select a maximum of 3 interests across all categories.`
+          );
+        }
+
+        return true;
+      }),
+
+    check("preferences.zodiacSign")
+      .optional()
+      .custom((value) => {
+        if (!isValidEntry(value, constants.zodiacSigns)) {
+          throw new Error("Invalid Zodiac Sign selected.");
+        }
+        return true;
+      }),
+
+    check("preferences.college")
+      .optional()
+      .custom((value) => {
+        if (!isValidEntry(value, constants.colleges)) {
+          throw new Error("Invalid college selected.");
+        }
+        return true;
+      }),
+
+    check("preferences.major")
+      .optional()
+      .custom((value) => {
+        if (!isValidEntry(value, constants.majors)) {
+          throw new Error("Invalid major selected.");
+        }
+        return true;
+      }),
+
+    check("preferences.collegeClubs")
+      .optional()
+      .isArray()
+      .custom((value) => {
+        value.forEach((club) => {
+          if (!isValidEntry(club, constants.collegeClubs)) {
+            throw new Error(`Invalid college club '${club}' selected.`);
+          }
+        });
+        return true;
+      }),
+
+    // 🎶 Favorite Artists (Array of values)
+    check("preferences.favoriteArtists")
+      .optional()
+      .isArray()
+      .custom((value) => {
+        value.forEach((artist) => {
+          if (!isValidEntry(artist, constants.artists)) {
+            throw new Error(`Invalid favorite artist '${artist}' selected.`);
+          }
+        });
+        return true;
+      }),
+
+    // 📺 Favorite TV Shows (Array of values)
+    check("preferences.favoriteShows")
+      .optional()
+      .isArray()
+      .custom((value) => {
+        value.forEach((show) => {
+          if (!isValidEntry(show, constants.tvShows)) {
+            throw new Error(`Invalid favorite show '${show}' selected.`);
+          }
+        });
+        return true;
+      }),
+
+    // 🌍 Favorite Places To Go (Array of values)
+    check("preferences.favoriteSportsTeams")
+      .optional()
+      .isArray()
+      .withMessage("Favorite sports teams must be an array.")
+      .custom((value) => {
+        value.forEach((team) => {
+          if (!isValidEntry(team, constants.sportsTeams)) {
+            throw new Error(`Invalid sports team '${team}' selected.`);
+          }
+        });
+        return true;
+      }),
+
+    // 🌍 Favorite Places To Go (Array of values)
+    check("preferences.favoritePlacesToGo")
+      .optional()
+      .isArray()
+      .custom((value) => {
+        value.forEach((place) => {
+          if (!isValidEntry(place, constants.favoritePlacesToGo)) {
+            throw new Error(`Invalid favorite place '${place}' selected.`);
+          }
+        });
+        return true;
+      }),
+  ];
+};
 const createPreferencesValidations = (isRequired = true) => {
   // Helper to conditionally apply optional() based on isRequired parameter
   const applyOptional = (validation) => {
@@ -266,202 +458,7 @@ const createPreferencesValidations = (isRequired = true) => {
       .withMessage("Bio cannot exceed 160 characters."),
   ];
 };
-const createEventPreferencesValidations = (isRequired = true) => {
-  // Helper to conditionally apply optional() based on isRequired parameter
-  const applyOptional = (validation) => {
-    return isRequired ? validation : validation.optional();
-  };
 
-  return [
-    applyOptional(
-      check("preferences")
-        .exists()
-        .withMessage("Preferences JSON is required.")
-        .custom((value) => {
-          if (typeof value !== "object" || value === null) {
-            throw new Error("Preferences must be a valid JSON object.");
-          }
-
-          // Required preference fields
-          const requiredKeys = [
-            "major",
-            "college",
-            "interests",
-            "musicGenre",
-            "zodiacSign",
-            "collegeClubs",
-            "favoriteShows",
-            "favoriteArtists",
-            "favoritePlacesToGo",
-            "favoriteSportsTeams",
-          ];
-
-          const missingKeys = [];
-
-          requiredKeys.forEach((key) => {
-            if (!Object.prototype.hasOwnProperty.call(value, key)) {
-              missingKeys.push(key); // 🔴 Only add missing keys (don't check empty values)
-            }
-          });
-
-          if (missingKeys.length > 0) {
-            console.error(
-              `🚨 Missing preference fields: ${missingKeys.join(", ")}`
-            );
-            throw new Error(
-              `Missing preference fields: ${missingKeys.join(", ")}`
-            );
-          }
-
-          return true;
-        })
-    ),
-
-    check("preferences.musicGenre")
-      .optional()
-      .custom((value) => {
-        if (!isValidEntry(value, constants.musicGenres)) {
-          throw new Error("Invalid genre selected.");
-        }
-        return true;
-      }),
-
-    check("preferences.interests")
-      .optional()
-      .custom((value) => {
-        if (!value || typeof value !== "object") {
-          throw new Error("Interests must be a valid JSON object.");
-        }
-
-        let totalInterests = 0; // Counter for total selected interests
-
-        Object.keys(value).forEach((category) => {
-          if (!constants.interests.hasOwnProperty(category)) {
-            throw new Error(`Invalid interest category: ${category}`);
-          }
-
-          const interestsArray = Array.isArray(value[category])
-            ? value[category]
-            : []; // Ensure it's always an array
-
-          totalInterests += interestsArray.length; // Count total interests
-
-          interestsArray.forEach((interest) => {
-            if (!constants.interests[category].includes(interest)) {
-              throw new Error(
-                `Invalid interest '${interest}' in category '${category}'`
-              );
-            }
-          });
-        });
-
-        // ✅ Ensure total interests across all categories is **maximum 3**
-        if (totalInterests > 3) {
-          throw new Error(
-            `You can select a maximum of 3 interests across all categories.`
-          );
-        }
-
-        return true;
-      }),
-
-    check("preferences.zodiacSign")
-      .optional()
-      .custom((value) => {
-        if (!isValidEntry(value, constants.zodiacSigns)) {
-          throw new Error("Invalid Zodiac Sign selected.");
-        }
-        return true;
-      }),
-
-    check("preferences.college")
-      .optional()
-      .custom((value) => {
-        if (!isValidEntry(value, constants.colleges)) {
-          throw new Error("Invalid college selected.");
-        }
-        return true;
-      }),
-
-    check("preferences.major")
-      .optional()
-      .custom((value) => {
-        if (!isValidEntry(value, constants.majors)) {
-          throw new Error("Invalid major selected.");
-        }
-        return true;
-      }),
-
-
-
-    check("preferences.collegeClubs")
-      .optional()
-      .isArray()
-      .custom((value) => {
-        value.forEach((club) => {
-          if (!isValidEntry(club, constants.collegeClubs)) {
-            throw new Error(`Invalid college club '${club}' selected.`);
-          }
-        });
-        return true;
-      }),
-
-
-
-    // 🎶 Favorite Artists (Array of values)
-    check("preferences.favoriteArtists")
-      .optional()
-      .isArray()
-      .custom((value) => {
-        value.forEach((artist) => {
-          if (!isValidEntry(artist, constants.artists)) {
-            throw new Error(`Invalid favorite artist '${artist}' selected.`);
-          }
-        });
-        return true;
-      }),
-
-    // 📺 Favorite TV Shows (Array of values)
-    check("preferences.favoriteShows")
-      .optional()
-      .isArray()
-      .custom((value) => {
-        value.forEach((show) => {
-          if (!isValidEntry(show, constants.tvShows)) {
-            throw new Error(`Invalid favorite show '${show}' selected.`);
-          }
-        });
-        return true;
-      }),
-
-    // 🌍 Favorite Places To Go (Array of values)
-    check("preferences.favoriteSportsTeams")
-      .optional()
-      .isArray()
-      .withMessage("Favorite sports teams must be an array.")
-      .custom((value) => {
-        value.forEach((team) => {
-          if (!isValidEntry(team, constants.sportsTeams)) {
-            throw new Error(`Invalid sports team '${team}' selected.`);
-          }
-        });
-        return true;
-      }),
-
-    // 🌍 Favorite Places To Go (Array of values)
-    check("preferences.favoritePlacesToGo")
-      .optional()
-      .isArray()
-      .custom((value) => {
-        value.forEach((place) => {
-          if (!isValidEntry(place, constants.favoritePlacesToGo)) {
-            throw new Error(`Invalid favorite place '${place}' selected.`);
-          }
-        });
-        return true;
-      }),
-  ];
-};
 
 
 const preferencesValidations = createPreferencesValidations(true);
@@ -470,6 +467,66 @@ const eventPreferencesValidations = createEventPreferencesValidations(true);
 const eventUpdatePreferencesValidations =
   createEventPreferencesValidations(false);
 
+
+
+const userValidations = {
+  updateProfile: [
+    check("firstName")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("First Name cannot be empty."),
+    check("lastName")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Last Name cannot be empty."),
+    check("email")
+      .optional()
+      .isEmail()
+      .withMessage("Please provide a valid email address.")
+      .bail()
+      .custom(async (email) => {
+        if (!emailValidator.validate(email)) {
+          throw new Error("Invalid email format.");
+        }
+        return true;
+      }),
+    check("dob")
+      .optional()
+      .not()
+      .isEmpty()
+      .withMessage("Date of Birth is required."),
+    check("pronouns")
+      .optional()
+      .isIn(["he_him", "she_her", "they_them", "other"])
+      .withMessage("Invalid pronoun selection."),
+    check("lat")
+      .optional()
+      .isFloat({ min: -90, max: 90 })
+      .withMessage("Invalid latitude value."),
+    check("long")
+      .optional()
+      .isFloat({ min: -180, max: 180 })
+      .withMessage("Invalid longitude value."),
+    check("profileImage")
+      .optional()
+      .custom((_, { req }) => {
+        if (!req.file) {
+          throw new Error("Profile image is required.");
+        }
+
+        const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+          throw new Error(
+            "Profile image must be a valid image file (JPEG, PNG, JPG)."
+          );
+        }
+        return true;
+      }),
+    ...updatePreferencesValidations,
+  ],
+};
 
 const authValidations = {
   register: [
@@ -617,65 +674,6 @@ const authValidations = {
   ],
 };
 
-const userValidations = {
-  updateProfile: [
-    check("firstName")
-      .optional()
-      .trim()
-      .notEmpty()
-      .withMessage("First Name cannot be empty."),
-    check("lastName")
-      .optional()
-      .trim()
-      .notEmpty()
-      .withMessage("Last Name cannot be empty."),
-    check("email")
-      .optional()
-      .isEmail()
-      .withMessage("Please provide a valid email address.")
-      .bail()
-      .custom(async (email) => {
-        if (!emailValidator.validate(email)) {
-          throw new Error("Invalid email format.");
-        }
-        return true;
-      }),
-    check("dob")
-      .optional()
-      .not()
-      .isEmpty()
-      .withMessage("Date of Birth is required."),
-    check("pronouns")
-      .optional()
-      .isIn(["he_him", "she_her", "they_them", "other"])
-      .withMessage("Invalid pronoun selection."),
-    check("lat")
-      .optional()
-      .isFloat({ min: -90, max: 90 })
-      .withMessage("Invalid latitude value."),
-    check("long")
-      .optional()
-      .isFloat({ min: -180, max: 180 })
-      .withMessage("Invalid longitude value."),
-    check("profileImage")
-      .optional()
-      .custom((_, { req }) => {
-        if (!req.file) {
-          throw new Error("Profile image is required.");
-        }
-
-        const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
-        if (!allowedMimeTypes.includes(req.file.mimetype)) {
-          throw new Error(
-            "Profile image must be a valid image file (JPEG, PNG, JPG)."
-          );
-        }
-        return true;
-      }),
-    ...updatePreferencesValidations,
-  ],
-};
-
 const eventValidations = {
   createEvent: [
     check("name")
@@ -710,7 +708,7 @@ const eventValidations = {
       }),
 
     check("image")
-      .optional()
+
       .custom((_, { req }) => {
         if (!req.file) {
           throw new Error("Event Image is required.");

@@ -432,7 +432,7 @@ exports.getUserEvents = async (userId) => {
   const events = await prisma.event.findMany({
     where: {
       userId: userId,
-      source: "uni", // Only user-created events
+      source: "uni", 
     },
     orderBy: {
       createdAt: "desc",

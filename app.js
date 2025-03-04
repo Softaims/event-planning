@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const path = require('path');
 const helmet = require('helmet');
+const setupSwagger = require("./swagger");
 
 //Routes Paths
 const routes = require("./routes/index");
@@ -19,8 +20,6 @@ const AppError = require("./utils/appError");
 
 //Express APP
 const app = express();
-
-
 
 // Pug View 
 app.enable('trust proxy');
@@ -63,9 +62,12 @@ app.use(
   })
 );
 
+
 // Parse incoming URL-encoded payloads
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+setupSwagger(app);
 
 // Data sanitization against XSS
 app.use(xss());
