@@ -468,7 +468,6 @@ const eventUpdatePreferencesValidations =
   createEventPreferencesValidations(false);
 
 
-
 const userValidations = {
   updateProfile: [
     check("firstName")
