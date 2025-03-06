@@ -82,63 +82,7 @@ router.get(
   authMiddleware.protect,
   eventsController.getEventAttendance
 );
-/**
- * @swagger
- * /events/user-interaction/{eventId}:
- *   post:
- *     summary: Check a specific user's interaction with an event
- *     tags: [Events]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: Event ID
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *                 description: User ID to check interaction for
- *             required:
- *               - userId
- *     responses:
- *       200:
- *         description: User interaction details fetched successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     isLiked:
- *                       type: boolean
- *                     isGoing:
- *                       type: boolean
- *       400:
- *         description: Bad request - missing required fields.
- *       401:
- *         description: Unauthorized.
- *       403:
- *         description: Forbidden - no permission to access this data.
- */
-router.get(
-  "/user-interaction/:eventId",
-  authMiddleware.protect,
-  eventsController.checkUserInteraction
-);
+
 /**
  * @swagger
  * /events/{eventId}/details:
@@ -265,7 +209,7 @@ router.post(
   "/",
   authMiddleware.protect,
   upload.single("image"),
-  parseJSONFields(["preferences"]),
+  parseJSONFields(["preferences", "ticketUrls"]),
   eventValidations.createEvent,
   validationMiddleware.validate,
   eventsController.createEvent
@@ -318,7 +262,7 @@ router.patch(
   "/:eventId",
   authMiddleware.protect,
   upload.single("image"),
-  parseJSONFields(["preferences"]),
+  parseJSONFields(["preferences", "ticketUrls"]),
   eventValidations.updateEvent,
   validationMiddleware.validate,
   eventsController.updateEvent

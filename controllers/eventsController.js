@@ -135,16 +135,39 @@ exports.getEventDetails = catchAsync(async (req, res, next) => {
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
+
   const userId = req.user.id;
+
+  // Fetch event details
   const eventDetails = await eventService.getEventDetails({
     eventId,
     userId,
   });
 
+  // Fetch user interaction details
+  const interaction = await eventService.getUserEventInteraction(
+    eventId,
+    userId
+  );
+
+  // Construct interaction data with default values if no interaction exists
+  const interactionData = interaction
+    ? {
+        isLiked: interaction.isLiked || false,
+        isGoing: interaction.isGoing || false,
+      }
+    : {
+        isLiked: false,
+        isGoing: false,
+      };
+
   res.status(200).json({
     status: "success",
     message: "Event Details fetched successfully.",
-    data: { event: eventDetails },
+    data: {
+      event: eventDetails,
+      interaction: interactionData,
+    },
   });
 });
 
@@ -242,7 +265,7 @@ exports.createEvent = catchAsync(async (req, res, next) => {
     eventData,
   });
 
-  res.status(201).json({
+  res.status(200).json({
     status: "success",
     message: "Event created successfully.",
     data: { event: newEvent },
@@ -255,18 +278,18 @@ exports.checkUserInteraction = catchAsync(async (req, res, next) => {
 
   // Validate input
   if (!eventId) {
-    return next(new AppError("Event ID is required.", 400));
+    return next(new AppError("Event ID is required.", 401));
   }
 
   if (!userId) {
-    return next(new AppError("User ID is required.", 400));
+    return next(new AppError("User ID is required.", 401));
   }
 
   if (req.user.id !== userId) {
     return next(
       new AppError(
         "You don't have permission to view this user's interactions.",
-        403
+        401
       )
     );
   }
@@ -307,13 +330,13 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
   // Check if the user is the owner of the event or an admin
   const event = await eventService.getEventById(eventId);
   if (!event) {
-    return next(new AppError("Event not found", 404));
+    return next(new AppError("Event not found", 401));
   }
 
   // Verify user has permission to update this event
   if (event.userId.toString() !== req.user.id.toString()) {
     return next(
-      new AppError("You don't have permission to delete this event.", 403)
+      new AppError("You don't have permission to update this event.", 401)
     );
   }
 
@@ -365,13 +388,13 @@ exports.deleteEvent = catchAsync(async (req, res, next) => {
   // Fetch the event from the service layer
   const event = await eventService.getEventById(eventId);
   if (!event) {
-    return next(new AppError("Event not found", 404));
+    return next(new AppError("Event not found", 401));
   }
 
   // Ensure both userId and req.user.id are of the same type (either both as strings or both as integers)
   if (event.userId.toString() !== req.user.id.toString()) {
     return next(
-      new AppError("You don't have permission to delete this event.", 403)
+      new AppError("You don't have permission to delete this event.", 401)
     );
   }
 
