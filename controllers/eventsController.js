@@ -311,9 +311,9 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
   }
 
   // Verify user has permission to update this event
-  if (event.userId.toString() !== req.user.id) {
+  if (event.userId.toString() !== req.user.id.toString()) {
     return next(
-      new AppError("You don't have permission to update this event.", 401)
+      new AppError("You don't have permission to delete this event.", 403)
     );
   }
 
@@ -362,19 +362,20 @@ exports.deleteEvent = catchAsync(async (req, res, next) => {
     return next(new AppError("Event ID is required.", 401));
   }
 
-  // Check if the user is the owner of the event or an admin
+  // Fetch the event from the service layer
   const event = await eventService.getEventById(eventId);
   if (!event) {
     return next(new AppError("Event not found", 404));
   }
 
-  // Verify user has permission to delete this event
-  if (event.userId.toString() !== req.user.id) {
+  // Ensure both userId and req.user.id are of the same type (either both as strings or both as integers)
+  if (event.userId.toString() !== req.user.id.toString()) {
     return next(
       new AppError("You don't have permission to delete this event.", 403)
     );
   }
 
+  // Proceed to delete the event
   const deletedEvent = await eventService.deleteEvent(eventId);
 
   res.status(200).json({

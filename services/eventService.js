@@ -419,7 +419,6 @@ exports.handleInteraction = async ({
   return attendanceRecord;
 };
 
-
 exports.getUserEvents = async (userId) => {
   // Fetch events created by the user
   const events = await prisma.event.findMany({
@@ -699,8 +698,16 @@ exports.getUserEventInteraction = async (eventId, userId) => {
 
 exports.getEventById = async (eventId) => {
   try {
-    // Find the event in the database
-    const event = await Event.findById(eventId);
+    const event = await prisma.event.findUnique({
+      where: {
+        id: eventId, 
+      },
+    });
+
+    if (!event) {
+      throw new AppError("Event not found", 404);
+    }
+
     return event;
   } catch (error) {
     logger.error(`Error getting event by ID: ${error.message}`);
