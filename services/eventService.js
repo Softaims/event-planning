@@ -340,50 +340,43 @@ exports.handleInteraction = async ({
   isGoing,
   eventData,
 }) => {
-  const isUserCreated = eventData?.source === "uni" || !eventData;
+  let event = null;
 
-  if (!isUserCreated && eventData) {
-    let event = await prisma.event.findFirst({
+  // First, check if the event already exists in the database by its internal event ID
+  if (eventId) {
+    event = await prisma.event.findUnique({
       where: {
-        externalId: eventId,
+        id: eventId, // Use the provided eventId (real internal ID)
       },
     });
-
-    // If external event doesn't exist, create it
-    if (!event) {
-      event = await prisma.event.create({
-        data: {
-          id: uuidv4(), // Generate a new internal ID
-          externalId: eventId, // Store the external ID
-          name: eventData.name,
-          description: eventData.description || "",
-          source: eventData.source,
-          image: eventData.image || "",
-          location: eventData.location || "",
-          dateTime: eventData.dateTime
-            ? new Date(eventData.dateTime)
-            : new Date(),
-          ageMin: eventData.ageMin || null,
-          ageMax: eventData.ageMax || null,
-          ticketUrls: eventData.ticketUrls || [],
-          preferences: eventData.preferences || null,
-          // No userId or createdBy for external events
-        },
-      });
-
-      // Update eventId to use the internal ID for the attendance record
-      eventId = event.id;
-    } else {
-      // Use the internal ID for the attendance record
-      eventId = event.id;
-    }
   }
 
-  // Find existing attendance record
+  // If the event does not exist and eventData is provided, create the event with the provided id
+  if (!event && eventData) {
+    event = await prisma.event.create({
+      data: {
+        id: eventData.id, // Use the id from eventData as the real event ID
+        name: eventData.name,
+        description: eventData.description || "",
+        source: eventData.source,
+        image: eventData.image || "",
+        location: eventData.location || "",
+        dateTime: eventData.dateTime
+          ? new Date(eventData.dateTime)
+          : new Date(),
+        ageMin: eventData.ageMin || null,
+        ageMax: eventData.ageMax || null,
+        ticketUrls: eventData.ticketUrls || [],
+        preferences: eventData.preferences || null,
+      },
+    });
+  }
+
+  // Now, check if the attendance record already exists for the user and event
   const existingAttendance = await prisma.eventAttendance.findUnique({
     where: {
       eventId_userId: {
-        eventId: eventId,
+        eventId: eventId || event.id, // Use the internal eventId or created event ID
         userId: userId,
       },
     },
@@ -394,7 +387,6 @@ exports.handleInteraction = async ({
   if (isLiked !== undefined) updateData.isLiked = isLiked;
   if (isGoing !== undefined) updateData.isGoing = isGoing;
 
-  // Update or create attendance record
   let attendanceRecord;
 
   if (existingAttendance) {
@@ -413,7 +405,7 @@ exports.handleInteraction = async ({
     attendanceRecord = await prisma.eventAttendance.create({
       data: {
         id: uuidv4(),
-        eventId: eventId,
+        eventId: eventId || event.id, // Use internal eventId
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
@@ -427,12 +419,13 @@ exports.handleInteraction = async ({
   return attendanceRecord;
 };
 
+
 exports.getUserEvents = async (userId) => {
   // Fetch events created by the user
   const events = await prisma.event.findMany({
     where: {
       userId: userId,
-      source: "uni", 
+      source: "uni",
     },
     orderBy: {
       createdAt: "desc",
@@ -649,7 +642,7 @@ exports.getEventAttendance = async (eventId, currentUser) => {
       },
     },
     include: {
-      user: true, 
+      user: true,
     },
   });
 
@@ -686,4 +679,31 @@ exports.getEventAttendance = async (eventId, currentUser) => {
     totalAttendees: attendance.length,
     attendees: attendeesWithMatches,
   };
+};
+
+exports.getUserEventInteraction = async (eventId, userId) => {
+  try {
+    const interaction = await prisma.eventAttendance.findFirst({
+      where: {
+        eventId: eventId,
+        userId: userId,
+      },
+    });
+
+    return interaction;
+  } catch (error) {
+    logger.error(`Error getting user interaction: ${error.message}`);
+    throw new AppError("Failed to retrieve user interaction", 500);
+  }
+};
+
+exports.getEventById = async (eventId) => {
+  try {
+    // Find the event in the database
+    const event = await Event.findById(eventId);
+    return event;
+  } catch (error) {
+    logger.error(`Error getting event by ID: ${error.message}`);
+    throw new AppError("Failed to retrieve event", 500);
+  }
 };

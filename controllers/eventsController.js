@@ -148,51 +148,6 @@ exports.getEventDetails = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.createEvent = catchAsync(async (req, res, next) => {
-  const eventData = {
-    ...req.body,
-    source: "uni",
-    ageMin: parseInt(req.body.ageMin, 10),
-    ageMax: parseInt(req.body.ageMax, 10),
-  };
-
-  let imageUrl = null;
-  // Handle image upload
-  if (req.file) {
-    const eventNameSanitized = req.body.name.replace(/[^a-zA-Z0-9-_ ]/g, ""); // Remove invalid characters
-    const fileName = `event-${eventNameSanitized}-${Date.now()}.jpg`;
-    const fileBuffer = req.file.buffer;
-
-    if (process.env.NODE_ENV === "development") {
-      const localDir = path.join(__dirname, "../public/images");
-      if (!fs.existsSync(localDir)) {
-        fs.mkdirSync(localDir, { recursive: true });
-      }
-
-      const localPath = path.join(localDir, fileName);
-      fs.writeFileSync(localPath, fileBuffer);
-      imageUrl = `/public/images/${fileName}`;
-      logger.info(`Event image stored locally: ${imageUrl}`);
-    } else {
-      imageUrl = await s3Service.uploadToS3(fileBuffer, fileName, "image");
-      logger.info(`Event image uploaded to S3: ${imageUrl}`);
-    }
-    eventData.image = imageUrl;
-  }
-
-  // Create event in database
-  const newEvent = await eventService.createEvent({
-    userId: req.user.id,
-    eventData,
-  });
-
-  res.status(201).json({
-    status: "success",
-    message: "Event created successfully.",
-    data: { event: newEvent },
-  });
-});
-
 exports.getUserEventOverview = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
@@ -249,12 +204,119 @@ exports.handleEventInteraction = catchAsync(async (req, res, next) => {
     },
   });
 });
+exports.createEvent = catchAsync(async (req, res, next) => {
+  const eventData = {
+    ...req.body,
+    source: "uni",
+    ageMin: parseInt(req.body.ageMin, 10),
+    ageMax: parseInt(req.body.ageMax, 10),
+  };
+
+  let imageUrl = null;
+  // Handle image upload
+  if (req.file) {
+    const eventNameSanitized = req.body.name.replace(/[^a-zA-Z0-9-_ ]/g, ""); // Remove invalid characters
+    const fileName = `event-${eventNameSanitized}-${Date.now()}.jpg`;
+    const fileBuffer = req.file.buffer;
+
+    if (process.env.NODE_ENV === "development") {
+      const localDir = path.join(__dirname, "../public/images");
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+      }
+
+      const localPath = path.join(localDir, fileName);
+      fs.writeFileSync(localPath, fileBuffer);
+      imageUrl = `/public/images/${fileName}`;
+      logger.info(`Event image stored locally: ${imageUrl}`);
+    } else {
+      imageUrl = await s3Service.uploadToS3(fileBuffer, fileName, "image");
+      logger.info(`Event image uploaded to S3: ${imageUrl}`);
+    }
+    eventData.image = imageUrl;
+  }
+
+  // Create event in database
+  const newEvent = await eventService.createEvent({
+    userId: req.user.id,
+    eventData,
+  });
+
+  res.status(201).json({
+    status: "success",
+    message: "Event created successfully.",
+    data: { event: newEvent },
+  });
+});
+
+exports.checkUserInteraction = catchAsync(async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.user.id;
+
+  // Validate input
+  if (!eventId) {
+    return next(new AppError("Event ID is required.", 400));
+  }
+
+  if (!userId) {
+    return next(new AppError("User ID is required.", 400));
+  }
+
+  if (req.user.id !== userId) {
+    return next(
+      new AppError(
+        "You don't have permission to view this user's interactions.",
+        403
+      )
+    );
+  }
+
+  // Get the user's interaction with this event from the service
+  const interaction = await eventService.getUserEventInteraction(
+    eventId,
+    userId
+  );
+
+  if (!interaction) {
+    return res.status(200).json({
+      status: "success",
+      message: "No interaction found for this user and event.",
+      data: {
+        isLiked: false,
+        isGoing: false,
+      },
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "User interaction details fetched successfully.",
+    data: {
+      isLiked: interaction.isLiked || false,
+      isGoing: interaction.isGoing || false,
+    },
+  });
+});
 
 exports.updateEvent = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
+
+  // Check if the user is the owner of the event or an admin
+  const event = await eventService.getEventById(eventId);
+  if (!event) {
+    return next(new AppError("Event not found", 404));
+  }
+
+  // Verify user has permission to update this event
+  if (event.userId.toString() !== req.user.id) {
+    return next(
+      new AppError("You don't have permission to update this event.", 401)
+    );
+  }
+
   const updateData = {
     ...req.body,
     ageMin: req.body.ageMin ? parseInt(req.body.ageMin, 10) : undefined,
@@ -287,10 +349,6 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
 
   const updatedEvent = await eventService.updateEvent(eventId, updateData);
 
-  if (!updatedEvent) {
-    return next(new AppError("Event not found", 404));
-  }
-
   res.status(200).json({
     status: "success",
     message: "Event updated successfully.",
@@ -303,11 +361,21 @@ exports.deleteEvent = catchAsync(async (req, res, next) => {
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
-  const deletedEvent = await eventService.deleteEvent(eventId);
 
-  if (!deletedEvent) {
+  // Check if the user is the owner of the event or an admin
+  const event = await eventService.getEventById(eventId);
+  if (!event) {
     return next(new AppError("Event not found", 404));
   }
+
+  // Verify user has permission to delete this event
+  if (event.userId.toString() !== req.user.id) {
+    return next(
+      new AppError("You don't have permission to delete this event.", 403)
+    );
+  }
+
+  const deletedEvent = await eventService.deleteEvent(eventId);
 
   res.status(200).json({
     status: "success",
