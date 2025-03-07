@@ -498,13 +498,20 @@ exports.filterEventsByUserPreferences = async (userPreferences, events) => {
     // Match interests categories
     if (userPreferences.interests && event.preferences.interests) {
       Object.keys(userPreferences.interests).forEach((category) => {
-        const userInterests = userPreferences.interests[category];
+        const userInterests = Array.isArray(userPreferences.interests[category])
+          ? userPreferences.interests[category]
+          : [];
+
+        if (!Array.isArray(userInterests)) {
+          console.error("Expected an array but got:", userInterests);
+          userInterests = []; // or convert it properly
+        }
 
         if (userInterests && userInterests.length > 0) {
           // Check if the event has matching interests in this category
           const eventInterests = event.preferences.interests[category] || [];
 
-          userInterests.forEach((interest) => {
+          userInterests?.forEach((interest) => {
             if (eventInterests.includes(interest)) {
               score += 2; // Higher weight for direct interest match
               matchedPreferences.push(`${category}: ${interest}`);
@@ -700,7 +707,7 @@ exports.getEventById = async (eventId) => {
   try {
     const event = await prisma.event.findUnique({
       where: {
-        id: eventId, 
+        id: eventId,
       },
     });
 
