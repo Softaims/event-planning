@@ -8,7 +8,7 @@ const fileFilter = (req, file, cb) => {
     const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = fileTypes.test(file.mimetype);
 
-    if (mimetype && extname) {
+    if (mimetype ||  extname) {
         cb(null, true);
     } else {
         cb(new Error('Only images (jpeg, jpg, png) are allowed.'));
