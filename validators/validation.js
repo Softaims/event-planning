@@ -114,9 +114,9 @@ const createEventPreferencesValidations = (isRequired = true) => {
     check("preferences.zodiacSign")
       .optional()
       .custom((value) => {
-        if (!isValidEntry(value, constants.zodiacSigns)) {
-          throw new Error("Invalid Zodiac Sign selected.");
-        }
+        // if (!isValidEntry(value, constants.zodiacSigns)) {
+        //   throw new Error("Invalid Zodiac Sign selected.");
+        // }
         return true;
       }),
 
