@@ -3,7 +3,7 @@ const dbEventDto = (event) => {
     id: event.id,
     name: event.name,
     description: event.description || "", 
-    dateTime: event.dateTime || "",
+    dateTime: event.dateTime || null,
     image: event.image || null, 
     source: event.source || "", 
     location: event.location || null, 
