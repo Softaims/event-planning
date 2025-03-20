@@ -792,12 +792,12 @@ const eventValidations = {
           throw new Error("Event Image is required.");
         }
 
-        const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
-        if (!allowedMimeTypes.includes(req.file.mimetype)) {
-          throw new Error(
-            "Event image must be a valid image file (JPEG, PNG, JPG)."
-          );
-        }
+        // const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+        // if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        //   throw new Error(
+        //     "Event image must be a valid image file (JPEG, PNG, JPG)."
+        //   );
+        // }
         return true;
       }),
 
@@ -824,17 +824,27 @@ const eventValidations = {
       .isInt({ min: 0, max: 100 })
       .withMessage("Maximum age must be between 0 and 100."),
 
-    check("ticketUrls")
+    // check("ticketUrls")
+    //   .optional()
+    //   .isArray()
+    //   .withMessage("Ticket URLs must be an array.")
+    //   .custom((value) => {
+    //     if (value) {
+    //       value.forEach((url) => {
+    //         if (!url.match(/^https?:\/\/.+/)) {
+    //           throw new Error("Invalid ticket URL format.");
+    //         }
+    //       });
+    //     }
+    //     return true;
+    //   }),
+    check("ticketUrl")
       .optional()
-      .isArray()
-      .withMessage("Ticket URLs must be an array.")
+      .isString()
+      .withMessage("Ticket URL must be a string.")
       .custom((value) => {
-        if (value) {
-          value.forEach((url) => {
-            if (!url.match(/^https?:\/\/.+/)) {
-              throw new Error("Invalid ticket URL format.");
-            }
-          });
+        if (value && !value.match(/^https?:\/\/.+/)) {
+          throw new Error("Invalid ticket URL format.");
         }
         return true;
       }),
