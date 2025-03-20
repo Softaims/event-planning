@@ -3,7 +3,7 @@ const eventDto = (event) => {
     id: event.id,
     name: event.name,
     description: event.description || "",
-    dateTime: event.dates?.start?.dateTime || "",
+    dateTime: event.dates?.start?.dateTime || null,
     image: event.images?.[0]?.url || null,
     source: "ticketmaster",
     location: `${event._embedded?.venues?.[0]?.name}, ${event._embedded?.venues?.[0]?.address?.line1}, ${event._embedded?.venues?.[0]?.city?.name}, ${event._embedded?.venues?.[0]?.country?.name}`,
