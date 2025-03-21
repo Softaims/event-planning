@@ -4,6 +4,11 @@ const logger = require("../utils/logger");
 const stopword = require("stopword");
 const { prisma } = require("../db");
 const { v4: uuidv4 } = require("uuid");
+const { sendNotification } = require("./sendNotification"); // Import notification function
+const {notifyPopularEvent} = require("./eventNotifications");
+const {popularByPreferences} = require("./eventNotifications");
+const extractFilters=require("./../utils/chatGPT")
+
 const {
   calculateMatchPercentage,
 } = require("../utils/calculateMatchPercentage ");
@@ -333,6 +338,7 @@ exports.getUserEvents = async (userId) => {
   });
 };
 
+
 exports.handleInteraction = async ({
   userId,
   eventId,
@@ -342,28 +348,20 @@ exports.handleInteraction = async ({
 }) => {
   let event = null;
 
-  // First, check if the event already exists in the database by its internal event ID
   if (eventId) {
-    event = await prisma.event.findUnique({
-      where: {
-        id: eventId, // Use the provided eventId (real internal ID)
-      },
-    });
+    event = await prisma.event.findUnique({ where: { id: eventId } });
   }
 
-  // If the event does not exist and eventData is provided, create the event with the provided id
   if (!event && eventData) {
     event = await prisma.event.create({
       data: {
-        id: eventData.id, // Use the id from eventData as the real event ID
+        id: eventData.id,
         name: eventData.name,
         description: eventData.description || "",
         source: eventData.source,
         image: eventData.image || "",
         location: eventData.location || "",
-        dateTime: eventData.dateTime
-          ? new Date(eventData.dateTime)
-          : new Date(),
+        dateTime: eventData.dateTime ? new Date(eventData.dateTime) : new Date(),
         ageMin: eventData.ageMin || null,
         ageMax: eventData.ageMax || null,
         ticketUrls: eventData.ticketUrls || [],
@@ -372,52 +370,41 @@ exports.handleInteraction = async ({
     });
   }
 
-  // Now, check if the attendance record already exists for the user and event
   const existingAttendance = await prisma.eventAttendance.findUnique({
-    where: {
-      eventId_userId: {
-        eventId: eventId || event.id, // Use the internal eventId or created event ID
-        userId: userId,
-      },
-    },
+    where: { eventId_userId: { eventId: eventId || event.id, userId: userId } },
   });
 
-  // Prepare update data - only include fields that were provided
   const updateData = {};
   if (isLiked !== undefined) updateData.isLiked = isLiked;
   if (isGoing !== undefined) updateData.isGoing = isGoing;
 
   let attendanceRecord;
-
   if (existingAttendance) {
-    // Update existing record with only the fields that were provided
     attendanceRecord = await prisma.eventAttendance.update({
-      where: {
-        id: existingAttendance.id,
-      },
+      where: { id: existingAttendance.id },
       data: updateData,
     });
-    logger.info(
-      `Updated attendance record for user ${userId} and event ${eventId}`
-    );
   } else {
-    // Create new record
     attendanceRecord = await prisma.eventAttendance.create({
       data: {
         id: uuidv4(),
-        eventId: eventId || event.id, // Use internal eventId
+        eventId: eventId || event.id,
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
       },
     });
-    logger.info(
-      `Created new attendance record for user ${userId} and event ${eventId}`
-    );
   }
 
+  // if (isGoing) {
+  //   await notifyPopularEvent(eventId || event.id, event?.name);
+  // }
+  // if (isLiked) {
+  //   await popularByPreferences(eventId || event.id, event?.name)
+  // } 
   return attendanceRecord;
 };
+
 
 exports.getUserEvents = async (userId) => {
   // Fetch events created by the user
@@ -638,6 +625,8 @@ exports.filterEventsByUserPreferences = async (userPreferences, events) => {
 exports.getEventAttendance = async (eventId, currentUser) => {
   if (!eventId) throw new Error("Event ID is required");
 
+
+
   // Fetch all attendees who are going to the event
   const attendance = await prisma.eventAttendance.findMany({
     where: {
@@ -683,6 +672,138 @@ exports.getEventAttendance = async (eventId, currentUser) => {
 
   return {
     totalAttendees: attendance.length,
+    attendees: attendeesWithMatches,
+  };
+};
+
+
+exports.searchEventAttendance = async (query, eventId, currentUser) => {
+  if (!query) {
+    throw new Error("Query parameter 'q' is required");
+  }
+
+  if (!eventId) {
+    throw new Error("Event ID is required");
+  }
+
+  // Extract structured filters from OpenAI
+  const filters = await extractFilters(query);
+  console.log("filters:", filters);
+
+  if (!filters || Object.keys(filters).length === 0) {
+    throw new Error("No filters extracted from query");
+  }
+
+  // Build Prisma `where` conditions for filtering users
+  let whereConditions = [];
+
+  Object.entries(filters).forEach(([key, value]) => {
+    // Handle nested paths (e.g., interests.foodDrink)
+    const pathParts = key.split('.');
+    
+    if (value && value.$ne) {
+      // Handle negative filters (do not like)
+      if (Array.isArray(value.$ne)) {
+        // For array values, create a condition that excludes users with any of these values
+        value.$ne.forEach(excludeValue => {
+          whereConditions.push({
+            NOT: {
+              user: {
+                preferences: {
+                  path: pathParts,
+                  array_contains: [excludeValue],
+                }
+              }
+            }
+          });
+        });
+      } else {
+        // For single values, exclude direct matches
+        whereConditions.push({
+          NOT: {
+            user: {
+              preferences: {
+                path: pathParts,
+                equals: value.$ne,
+              }
+            }
+          }
+        });
+      }
+    } else if (Array.isArray(value)) {
+      // For positive array filters (likes any of these)
+      // Create an OR condition for each value in the array
+      const orConditions = value.map(v => ({
+        user: {
+          preferences: {
+            path: pathParts,
+            array_contains: [v],
+          }
+        }
+      }));
+      
+      if (orConditions.length > 0) {
+        whereConditions.push({
+          OR: orConditions
+        });
+      }
+    } else {
+      // Direct match for single values
+      whereConditions.push({
+        user: {
+          preferences: {
+            path: pathParts,
+            equals: value,
+          }
+        }
+      });
+    }
+  });
+
+  // Fetch all attendees who are going to the event
+  const attendance = await prisma.eventAttendance.findMany({
+    where: {
+      eventId,
+      isGoing: true,
+      user: {
+        isProfilePublic: true,
+      },
+      AND: whereConditions, // Apply structured filters
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  // Get current user's preferences
+  const currentUserPrefs = currentUser?.preferences;
+
+  const attendeesWithMatches = attendance.map((a) => {
+    const attendeeData = {
+      userId: a.userId,
+      name: `${a.user.firstName} ${a.user.lastName}`,
+      profileImage: a.user.profileImage,
+    };
+
+    // Skip calculating match for the current user with themselves
+    if (a.userId === currentUser.id) {
+      return attendeeData;
+    }
+
+    // Calculate match percentage if both users have preferences
+    if (currentUserPrefs && a.user.preferences) {
+      const matchPercentage = calculateMatchPercentage(currentUserPrefs, a.user.preferences);
+      return {
+        ...attendeeData,
+        matchPercentage,
+      };
+    }
+
+    return attendeeData;
+  });
+
+  return {
+    totalAttendees: attendeesWithMatches.length,
     attendees: attendeesWithMatches,
   };
 };

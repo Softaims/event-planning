@@ -6,7 +6,8 @@ const router = express.Router();
 const validationMiddleware = require("../middlewares/validationMiddleware");
 const authMiddleware = require("../middlewares/authMiddleware");
 const parseJSONFields = require("../middlewares/parseJsonFields");
-
+const extractFilters = require("./../utils/chatGPT"); // Adjust the path as needed
+const { prisma } = require("../db");
 /**
  * @swagger
  * tags:
@@ -83,6 +84,10 @@ router.get(
   eventsController.getEventAttendance
 );
 
+router.get("/searchAttendance/:eventId",
+  authMiddleware.protect,
+  eventsController.searchEventAttendance
+)
 /**
  * @swagger
  * /events/{eventId}/details:
@@ -294,5 +299,9 @@ router.delete(
   authMiddleware.protect,
   eventsController.deleteEvent
 );
+
+
+
+
 
 module.exports = router;

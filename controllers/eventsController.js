@@ -116,6 +116,43 @@ exports.getEventAttendance = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.searchEventAttendance = catchAsync(async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.user.id;
+  const query = req.query.q;
+
+  if (!eventId) {
+    return next(new AppError("Event ID is required.", 400)); // 400 instead of 401
+  }
+
+  if (!query) {
+    return next(new AppError("Query parameter 'q' is required.", 400));
+  }
+
+  // Get full user data including preferences
+  const currentUser = await authService.findUserById(userId);
+
+  if (!currentUser) {
+    return next(new AppError("User not found.", 404));
+  }
+
+  // Call eventService with corrected argument order
+  const attendanceData = await eventService.searchEventAttendance(
+    query, // Pass query first
+    eventId,
+    currentUser
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Attendance fetched successfully.",
+    data: { event: attendanceData },
+  });
+});
+
+
+
+
 exports.isUserGoing = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
   if (!eventId) {
