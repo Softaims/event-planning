@@ -6,3 +6,6 @@ development.log
 public/images
 .qodo
 config/firebase-service-account.json
+
+
+git rm --cached config/firebase-service-account.json

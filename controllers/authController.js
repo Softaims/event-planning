@@ -305,11 +305,11 @@ exports.logout = catchAsync(async (req, res, next) => {
     return next(new AppError("You are not logged in!", 401));
   }
 
-  // Remove the stored JWT and FCM token from the database
-  await prisma.user.update({
-    where: { id: req.user.id },
-    data: { currentAuthToken: null, fcmToken: null },
-  });
+    // Remove the stored JWT from the database
+    await prisma.user.update({
+        where: { id: req.user.id },
+        data: { currentAuthToken: null ,fcmToken: null},
+    });
 
   res.cookie("event_token", "loggedout", {
     expires: new Date(Date.now() + 10 * 1000), // Expires in 10 seconds
@@ -319,9 +319,7 @@ exports.logout = catchAsync(async (req, res, next) => {
   });
 
   logger.info("User logged out and FCM token removed");
-  res
-    .status(200)
-    .json({ status: "success", message: "Logged out successfully" });
+    res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 });
 
 exports.forgotPassword = catchAsync(async (req, res, next) => {
