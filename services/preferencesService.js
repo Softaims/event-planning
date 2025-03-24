@@ -29,3 +29,6 @@ exports.getPreferences = async (id) => {
 
   return preferences;
 };
+
+//git push -u origin numan
+
