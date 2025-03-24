@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main # Change this to your deployment branch if different
+      - main
 
 jobs:
   deploy:
@@ -23,7 +23,7 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh root@52.56.252.188 << 'EOF'
-          cd /path/to/your/project/event-planning  # Ensure you are in the correct directory
+          cd /home/ubuntu/event-planning  # Ensure correct path
           
           # Stash any local changes
           git stash
@@ -40,11 +40,14 @@ jobs:
           # Check if the app is already running via PM2
           if pm2 list | grep -q "event-planning"; then
             echo "App is already running, restarting..."
-            pm2 restart event-planning  # Restart the existing app
+            pm2 restart event-planning
           else
             echo "App is not running, starting..."
-            pm2 start npm --name "event-planning" -- start  # Start the app if it's not running
+            pm2 start npm --name "event-planning" -- start
           fi
+          
+          # Synchronize the PM2 process list
+          pm2 save
 
           exit
           EOF
