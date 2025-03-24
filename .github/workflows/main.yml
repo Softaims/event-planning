@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main
+      - main # Change this to your deployment branch if different
 
 jobs:
   deploy:
@@ -23,31 +23,11 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh root@52.56.252.188 << 'EOF'
-          cd /home/ubuntu/event-planning  # Ensure correct path
-          
-          # Stash any local changes
+          cd event-planning 
           git stash
-          
-          # Pull latest changes
           git pull origin main
-          
-          # Install dependencies
           npm install
-          
-          # Generate Prisma client
           npx prisma generate   
-          
-          # Check if the app is already running via PM2
-          if pm2 list | grep -q "event-planning"; then
-            echo "App is already running, restarting..."
-            pm2 restart event-planning
-          else
-            echo "App is not running, starting..."
-            pm2 start npm --name "event-planning" -- start
-          fi
-          
-          # Synchronize the PM2 process list
-          pm2 save
-
+          pm2 restart all
           exit
           EOF
