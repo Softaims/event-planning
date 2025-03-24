@@ -22,6 +22,7 @@ exports.register = catchAsync(async (req, res, next) => {
     pronouns,
     lat,
     long,
+    fcmToken, // ✅ Accept FCM Token
   } = req.body;
   dob = new Date(dob);
 
@@ -118,6 +119,7 @@ exports.register = catchAsync(async (req, res, next) => {
     preferences: defaultPreferences,
     lat,
     long,
+    fcmToken, // ✅ Save FCM Token in DB
   });
 
   // Send OTP via Twilio
@@ -153,6 +155,7 @@ exports.register = catchAsync(async (req, res, next) => {
 
   logger.info(`User registered: ${newUser.phoneNumber}`);
 });
+
 
 exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
   const { otp } = req.body; // User submits email and OTP
@@ -266,7 +269,7 @@ exports.resendVerificationCode = catchAsync(async (req, res, next) => {
 });
 
 exports.login = catchAsync(async (req, res, next) => {
-  const { phoneNumber, password } = req.body;
+  const { phoneNumber, password, fcmToken } = req.body;
 
   const user = await authService.findUserByPhone(phoneNumber);
 
@@ -279,6 +282,14 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Please verify your phone number.", 401));
   }
 
+  // Store the FCM token if provided
+  if (fcmToken) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { fcmToken: fcmToken },
+    });
+  }
+
   authService.createSendToken(
     res,
     user,
@@ -288,15 +299,16 @@ exports.login = catchAsync(async (req, res, next) => {
   );
 });
 
+
 exports.logout = catchAsync(async (req, res, next) => {
   if (!req.user) {
     return next(new AppError("You are not logged in!", 401));
   }
 
-  // Remove the stored JWT from the database
+  // Remove the stored JWT and FCM token from the database
   await prisma.user.update({
     where: { id: req.user.id },
-    data: { currentAuthToken: null },
+    data: { currentAuthToken: null, fcmToken: null },
   });
 
   res.cookie("event_token", "loggedout", {
@@ -306,7 +318,7 @@ exports.logout = catchAsync(async (req, res, next) => {
     sameSite: "Strict", // Adjust based on your application's needs
   });
 
-  logger.info("User logged out");
+  logger.info("User logged out and FCM token removed");
   res
     .status(200)
     .json({ status: "success", message: "Logged out successfully" });

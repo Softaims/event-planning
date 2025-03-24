@@ -341,13 +341,15 @@ exports.getUserEvents = async (userId) => {
 
 exports.handleInteraction = async ({
   userId,
-  eventId,
+  eventId,  // This is the externalId from the frontend
   isLiked,
   isGoing,
   eventData,
 }) => {
   let event = null;
 
+  console.log('event id is ', eventId);
+  
   if (eventId) {
     event = await prisma.event.findUnique({ where: { externalId: eventId } });
   }
@@ -371,8 +373,11 @@ exports.handleInteraction = async ({
     });
   }
 
+  // Use the internal ID (event.id) for database operations
+  const internalEventId = event.id;
+
   const existingAttendance = await prisma.eventAttendance.findUnique({
-    where: { eventId_userId: { eventId: eventId , userId: userId } },
+    where: { eventId_userId: { eventId: internalEventId, userId: userId } },
   });
 
   const updateData = {};
@@ -389,7 +394,7 @@ exports.handleInteraction = async ({
     attendanceRecord = await prisma.eventAttendance.create({
       data: {
         id: uuidv4(),
-        eventId: eventId ,
+        eventId: internalEventId,  // Use internal ID
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
@@ -397,12 +402,12 @@ exports.handleInteraction = async ({
     });
   }
 
-  // if (isGoing) {
-  //   await notifyPopularEvent(eventId, event?.name);
-  // }
-  // if (isLiked) {
-  //   await popularByPreferences(eventId , event?.name)
-  // } 
+  if (isGoing) {
+    await notifyPopularEvent(eventId, event?.name);
+  }
+  if (isLiked) {
+    await popularByPreferences(eventId, event?.name)
+  } 
   return attendanceRecord;
 };
 

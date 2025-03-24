@@ -581,11 +581,11 @@ const authValidations = {
           throw new Error("Invalid phone number format.");
         }
 
-        // Restrict to Pakistan (+92), India (+91), USA (+1)
-        const allowedCountries = ["PK", "IN", "US"];
+        // Restrict USA (+1)
+        const allowedCountries = ["US"];
         if (!allowedCountries.includes(phoneNumber.country)) {
           throw new Error(
-            "Only phone numbers from Pakistan (+92), India (+91), and USA (+1) are allowed."
+            "Only phone numbers from USA (+1) are allowed."
           );
         }
 
@@ -643,9 +643,23 @@ const authValidations = {
     check("phoneNumber")
       .not()
       .isEmpty()
-      .withMessage("Phone Number is required."),
-    check("password").not().isEmpty().withMessage("Password is required."),
+      .withMessage("Phone Number is required.")
+      .isNumeric()
+      .withMessage("Phone Number must be numeric.")
+      .trim(),
+    check("password")
+      .not()
+      .isEmpty()
+      .withMessage("Password is required.")
+      .trim(),
+    check("fcmToken")
+      .optional()
+      .isString()
+      .withMessage("FCM Token must be a string.")
+      .notEmpty()
+      .withMessage("FCM Token cannot be empty if provided."),
   ],
+  
   forgotPassword: [
     check("phoneNumber")
       .not()

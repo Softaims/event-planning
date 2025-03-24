@@ -38,6 +38,9 @@ model User {
   long                          Float?
   eventAttendances              EventAttendance[]
   createdEvents                 Event[]                   @relation("EventCreatedBy") 
+
+  fcmToken                       String?
+
 }
 
 model EventAttendance {
@@ -53,7 +56,7 @@ model EventAttendance {
   
 }
 
-model Event {
+model Event { 
   id           String   @id @default(uuid())
   externalId   String?  @unique 
   name         String 

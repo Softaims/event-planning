@@ -4,3 +4,4 @@ combined.log
 development.log
 .env
 public/images
+.qodo
