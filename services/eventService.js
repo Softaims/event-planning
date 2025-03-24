@@ -349,13 +349,14 @@ exports.handleInteraction = async ({
   let event = null;
 
   if (eventId) {
-    event = await prisma.event.findUnique({ where: { id: eventId } });
+    event = await prisma.event.findUnique({ where: { externalId: eventId } });
   }
 
   if (!event && eventData) {
     event = await prisma.event.create({
       data: {
-        id: eventData.id,
+        id: uuidv4(), // Generate our internal event ID
+        externalId: eventId, // Store the Ticketmaster event ID
         name: eventData.name,
         description: eventData.description || "",
         source: eventData.source,
@@ -371,7 +372,7 @@ exports.handleInteraction = async ({
   }
 
   const existingAttendance = await prisma.eventAttendance.findUnique({
-    where: { eventId_userId: { eventId: eventId || event.id, userId: userId } },
+    where: { eventId_userId: { eventId: eventId , userId: userId } },
   });
 
   const updateData = {};
@@ -388,7 +389,7 @@ exports.handleInteraction = async ({
     attendanceRecord = await prisma.eventAttendance.create({
       data: {
         id: uuidv4(),
-        eventId: eventId || event.id,
+        eventId: eventId ,
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
@@ -397,10 +398,10 @@ exports.handleInteraction = async ({
   }
 
   // if (isGoing) {
-  //   await notifyPopularEvent(eventId || event.id, event?.name);
+  //   await notifyPopularEvent(eventId, event?.name);
   // }
   // if (isLiked) {
-  //   await popularByPreferences(eventId || event.id, event?.name)
+  //   await popularByPreferences(eventId , event?.name)
   // } 
   return attendanceRecord;
 };
