@@ -23,11 +23,28 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh root@52.56.252.188 << 'EOF'
-          cd event-planning 
+          cd /path/to/your/project/event-planning  # Ensure you are in the correct directory
+          
+          # Stash any local changes
           git stash
+          
+          # Pull latest changes
           git pull origin main
+          
+          # Install dependencies
           npm install
+          
+          # Generate Prisma client
           npx prisma generate   
-          pm2 restart all
+          
+          # Check if the app is already running via PM2
+          if pm2 list | grep -q "event-planning"; then
+            echo "App is already running, restarting..."
+            pm2 restart event-planning  # Restart the existing app
+          else
+            echo "App is not running, starting..."
+            pm2 start npm --name "event-planning" -- start  # Start the app if it's not running
+          fi
+
           exit
           EOF
