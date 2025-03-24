@@ -4,7 +4,6 @@ const logger = require("../utils/logger");
 const stopword = require("stopword");
 const { prisma } = require("../db");
 const { v4: uuidv4 } = require("uuid");
-const { sendNotification } = require("./sendNotification"); // Import notification function
 const {notifyPopularEvent} = require("./eventNotifications");
 const {popularByPreferences} = require("./eventNotifications");
 const extractFilters=require("./../utils/chatGPT")
