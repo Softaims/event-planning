@@ -5,3 +5,4 @@ development.log
 .env
 public/images
 .qodo
+config/firebase-service-account.json
