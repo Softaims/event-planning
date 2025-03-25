@@ -85,23 +85,23 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   ];
 
   // Filter out objects with null location, image, or dateTime
-  mergedResults = mergedResults.filter(
-    (event) => event.location && event.image && event.dateTime
-  );
+  // mergedResults = mergedResults.filter(
+  //   (event) => event.location && event.image && event.dateTime
+  // );
 
-  // Sort and limit to exact size
-  mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-  const finalResults = mergedResults.slice(0, size);
+  // // Sort and limit to exact size
+  // mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  // const finalResults = mergedResults.slice(0, size);
 
-  console.log(finalResults, "filtered results");
+  // console.log(finalResults, "filtered results");
 
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
     data: {
       page,
-      total: finalResults.length,
-      results: finalResults,
+      total: mergedResults.length,
+      results:  mergedResults,
     },
   });
 });
@@ -283,11 +283,12 @@ exports.createEvent = catchAsync(async (req, res, next) => {
   const eventData = {
     ...req.body,
     source: "uni",
-    ageMin: parseInt(req.body.ageMin, 10),
-    ageMax: parseInt(req.body.ageMax, 10),
+    ageMin: req.body.ageMin ? parseInt(req.body.ageMin, 10) : null,
+    ageMax: req.body.ageMax ? parseInt(req.body.ageMax, 10) : null,
   };
 
   let imageUrl = null;
+
   // Handle image upload
   if (req.file) {
     const eventNameSanitized = req.body.name.replace(/[^a-zA-Z0-9-_ ]/g, ""); // Remove invalid characters
@@ -311,18 +312,22 @@ exports.createEvent = catchAsync(async (req, res, next) => {
     eventData.image = imageUrl;
   }
 
-  // Create event in database
+  // Create event in the database
   const newEvent = await eventService.createEvent({
     userId: req.user.id,
     eventData,
   });
 
+  // Update the event to set externalId = id
+  await eventService.updateEvent(newEvent.id, { externalId: newEvent.id });
+
   res.status(200).json({
     status: "success",
     message: "Event created successfully.",
-    data: { event: newEvent },
+    data: { event: { ...newEvent, externalId: newEvent.id } },
   });
 });
+
 
 exports.checkUserInteraction = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;
