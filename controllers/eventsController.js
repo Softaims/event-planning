@@ -85,23 +85,23 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   ];
 
   // Filter out objects with null location, image, or dateTime
-  // mergedResults = mergedResults.filter(
-  //   (event) => event.location && event.image && event.dateTime
-  // );
+  mergedResults = mergedResults.filter(
+    (event) => event.location && event.image && event.dateTime
+  );
 
-  // // Sort and limit to exact size
-  // mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-  // const finalResults = mergedResults.slice(0, size);
+  // Sort and limit to exact size
+  mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  const finalResults = mergedResults.slice(0, size);
 
-  // console.log(finalResults, "filtered results");
+  console.log(finalResults, "filtered results");
 
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
     data: {
       page,
-      total: mergedResults.length,
-      results:  mergedResults,
+      total: finalResults.length,
+      results: finalResults,
     },
   });
 });
