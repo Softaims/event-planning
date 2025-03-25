@@ -38,12 +38,16 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     longitude = userData?.long;
   }
 
+  // Calculate sizes for each source
+  const perSourceSize = Math.floor(size / 3);
+  const remainingSize = size % 3;
+
   const [events, places, eventsFromDb] = await Promise.all([
     eventService.fetchTicketmasterEvents({
       query,
       city,
       eventCategory,
-      size,
+      size: perSourceSize + (remainingSize > 0 ? 1 : 0),
       page,
       latitude,
       longitude,
@@ -57,7 +61,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       latitude,
       longitude,
       radius,
-      size,
+      size: perSourceSize + (remainingSize > 1 ? 1 : 0),
     }),
     eventService.getEventsFromDb(),
   ]);
@@ -72,25 +76,36 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   const latestFilteredEvents = filteredEvents
     .filter((event) => event.createdAt)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice((page - 1) * size, page * size);
+    .slice(0, perSourceSize);
 
-  const mergedResults = [
+  let mergedResults = [
     ...events.map((event) => ({ ...eventDto(event) })),
     ...latestFilteredEvents.map((event) => ({ ...dbEventDto(event) })),
     ...places.map((place) => ({ ...placeDto(place) })),
   ];
+
+  // Filter out objects with null location, image, or dateTime
+  mergedResults = mergedResults.filter(
+    (event) => event.location && event.image && event.dateTime
+  );
+
+  // Sort and limit to exact size
   mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  const finalResults = mergedResults.slice(0, size);
+
+  console.log(finalResults, "filtered results");
 
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
     data: {
       page,
-      total: mergedResults.length,
-      results: mergedResults,
+      total: finalResults.length,
+      results: finalResults,
     },
   });
 });
+
 
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
   const { eventId } = req.params;

@@ -3,29 +3,29 @@
         "creativeArts": [
             "🎨 Art",
             "📸 Photography",
-            "✍️ Content Creation",
-            "🎬 Movies",
-            "🍥 Anime",
-            "📖 Reading",
-            "📝 Writing",
-            "🎨 DIY/Crafts"
+            "🤳 Content Creation",
+            "🎥 Movies",
+            "🦸 Anime",
+            "📚 Reading",
+            "✍️ Writing",
+            "🛠️ DIY/Crafts"
         ],
         "foodDrink": [
             "👨‍🍳 Cooking",
-            "🍽️ Foodie",
-            "☕ Coffee Enthusiast",
+            "🌯 Foodie",
+            "☕️ Coffee Enthusiast",
             "🍷 Wine Tasting",
-            "🥞 Brunch Culture"
+            "🥂 Brunch Culture"
         ],
         "fitnessWellness": [
             "🏋️‍♂️ Fitness",
             "🧘 Yoga",
             "🥾 Hiking",
-            "🏊‍♂️ Swimming",
+            "🏊 Swimming",
             "🎾 Tennis",
             "🏐 Volleyball",
             "🏓 Pickleball",
-            "⛪ Church",
+            "⛪️ Church",
             "💃 Dance"
         ],
         "sportsGaming": [
@@ -42,27 +42,27 @@
             "👟 Streetwear",
             "💄 Makeup",
             "✈️ Travel",
-            "🔮 Astrology",
-            "🛍️ Thrifting"
+            "♊️ Astrology",
+            "👖 Thrifting"
         ],
         "outdoorAdventure": [
             "🏂 Snowboarding",
-            "⛸️ Skating",
+            "🛹 Skating",
             "🎣 Fishing",
             "⛳ Golf",
             "🥾 Hiking",
-            "🏕️ Camping"
+            "⛺️ Camping"
         ],
         "nightlifeMusic": [
-            "🎶 Live Music",
-            "🍻 Bar Hopping",
-            "🕺 Clubbing",
-            "🎡 Festival Culture"
+            "🎤 Live Music",
+            "🍾 Bar Hopping",
+            "🪩 Clubbing",
+            "🎪 Festival Culture"
         ],
         "techDigital": [
-            "💻 Coding",
-            "₿ Crypto/NFTs",
-            "🚀 Startups"
+            "⌨️ Coding",
+            "🤑 Crypto/NFTs",
+            "📉 Startups"
         ]
     }
 }
