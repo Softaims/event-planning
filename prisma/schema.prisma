@@ -32,49 +32,46 @@ model User {
   phoneVerificationTokenExpires DateTime?
   preferences                   Json?
   isRegistrationComplete        Boolean                   @default(false)
-  isProfilePublic               Boolean                   @default(true)
   lat                           Float?
   location                      Unsupported("geography")?
   long                          Float?
+  isProfilePublic               Boolean                   @default(true)
+  fcmToken                      String?
+  createdEvents                 Event[]                   @relation("EventCreatedBy")
   eventAttendances              EventAttendance[]
-  createdEvents                 Event[]                   @relation("EventCreatedBy") 
-
-  fcmToken                       String?
-
 }
 
 model EventAttendance {
-  id         String   @id @default(uuid())
-  eventId    String   
-  userId     Int   
-  createdAt  DateTime @default(now())
-  isGoing    Boolean  @default(false)
-  isLiked    Boolean  @default(false)
-  user       User     @relation(fields: [userId], references: [id])
-  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  @@unique([eventId, userId]) 
-  
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    Int
+  createdAt DateTime @default(now())
+  isGoing   Boolean  @default(false)
+  isLiked   Boolean  @default(false)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
 }
 
-model Event { 
-  id           String   @id @default(uuid())
-  externalId   String?  @unique 
-  name         String 
-  description  String?
-  dateTime     DateTime?
-  image        String? 
-  source       String?  
-  location     String?   
-  ageMin       Int?    
-  ageMax       Int?     
-  ticketUrls   String[] 
-  preferences  Json? 
-  createdAt    DateTime @default(now()) 
-  updatedAt    DateTime @updatedAt
-  createdBy    User?    @relation("EventCreatedBy", fields: [userId], references: [id]) 
-  userId       Int?     
-  eventAttendances EventAttendance[] 
-  
+model Event {
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  dateTime         DateTime?
+  image            String?
+  source           String?
+  location         String?
+  ageMin           Int?
+  ageMax           Int?
+  ticketUrls       String[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  preferences      Json?
+  userId           Int?
+  externalId       String?           @unique
+  createdBy        User?             @relation("EventCreatedBy", fields: [userId], references: [id])
+  eventAttendances EventAttendance[]
 }
 
 enum Role {
