@@ -42,14 +42,15 @@ model User {
 }
 
 model EventAttendance {
-  id        String   @id @default(uuid())
-  eventId   String
-  userId    Int
-  createdAt DateTime @default(now())
-  isGoing   Boolean  @default(false)
-  isLiked   Boolean  @default(false)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  id         String   @id @default(uuid())
+  eventId    String
+  externalId String
+  userId     Int
+  createdAt  DateTime @default(now())
+  isGoing    Boolean  @default(false)
+  isLiked    Boolean  @default(false)
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([eventId, userId])
 }

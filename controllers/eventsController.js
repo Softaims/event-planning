@@ -183,16 +183,19 @@ exports.isUserGoing = catchAsync(async (req, res, next) => {
 });
 
 exports.getEventDetails = catchAsync(async (req, res, next) => {
+
+  console.log('hello',)
   const { eventId } = req.params;
   if (!eventId) {
     return next(new AppError("Event ID is required.", 401));
   }
 
   const userId = req.user.id;
-
+  console.log('hello',userId)
   // Fetch event details
+  let externalId=eventId;
   const eventDetails = await eventService.getEventDetails({
-    eventId,
+    externalId,
     userId,
   });
 

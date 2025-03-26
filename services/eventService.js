@@ -185,14 +185,16 @@ exports.isUserGoing = async (eventId, userId) => {
   return { isGoing: attendance ? attendance.isGoing : false };
 };
 
-exports.getEventDetails = async ({ eventId, userId }) => {
-  if (!eventId || !userId) {
-    throw new Error("Event ID and User ID are required");
+exports.getEventDetails = async ({ externalId, userId }) => {
+
+  console.log('cat ', externalId, userId);
+  if (!externalId || !userId) {
+    throw new Error("External ID and User ID are required");
   }
 
-  // Fetch attendees
+  // Fetch attendees by externalId instead of eventId
   const attendees = await prisma.eventAttendance.findMany({
-    where: { eventId },
+    where: { externalId },
     include: { user: true },
   });
 
@@ -393,7 +395,8 @@ exports.handleInteraction = async ({
     attendanceRecord = await prisma.eventAttendance.create({
       data: {
         id: uuidv4(),
-        eventId: internalEventId,  // Use internal ID
+        eventId: internalEventId,  
+        externalId: eventId,
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
