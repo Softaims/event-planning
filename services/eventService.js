@@ -633,12 +633,20 @@ exports.filterEventsByUserPreferences = async (userPreferences, events) => {
 exports.getEventAttendance = async (eventId, currentUser) => {
   if (!eventId) throw new Error("Event ID is required");
 
+  // Find the event using the externalId
+  const event = await prisma.event.findUnique({
+    where: { externalId: eventId },
+    select: { id: true }, // Only fetch the actual event ID
+  });
 
+  if (!event) {
+    throw new Error("Event not found");
+  }
 
   // Fetch all attendees who are going to the event
   const attendance = await prisma.eventAttendance.findMany({
     where: {
-      eventId,
+      eventId: event.id, // Use the actual event ID
       isGoing: true,
       user: {
         isProfilePublic: true,
@@ -649,7 +657,7 @@ exports.getEventAttendance = async (eventId, currentUser) => {
     },
   });
 
-  // Get current user's preferences directly from the user object
+  // Get current user's preferences
   const currentUserPrefs = currentUser.preferences;
 
   const attendeesWithMatches = attendance.map((a) => {
@@ -659,12 +667,12 @@ exports.getEventAttendance = async (eventId, currentUser) => {
       profileImage: a.user.profileImage,
     };
 
-    // Skip calculating match for the current user with themselves
+    // Skip match calculation for the current user
     if (a.userId === currentUser.id) {
       return attendeeData;
     }
 
-    // Calculate match percentage if both users have preferences
+    // Calculate match percentage
     if (currentUserPrefs && a.user.preferences) {
       const matchPercentage = calculateMatchPercentage(
         currentUserPrefs,
@@ -771,7 +779,7 @@ exports.searchEventAttendance = async (query, eventId, currentUser) => {
   // Fetch all attendees who are going to the event
   const attendance = await prisma.eventAttendance.findMany({
     where: {
-      eventId,
+      externalId: eventId,
       isGoing: true,
       user: {
         isProfilePublic: true,

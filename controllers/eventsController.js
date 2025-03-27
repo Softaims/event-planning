@@ -66,14 +66,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     eventService.getEventsFromDb(),
   ]);
 
-  const filteredEvents = userData?.preferences
-    ? await eventService.filterEventsByUserPreferences(
-        userData.preferences,
-        eventsFromDb
-      )
-    : eventsFromDb;
-
-  const latestFilteredEvents = filteredEvents
+  const latestFilteredEvents = eventsFromDb
     .filter((event) => event.createdAt)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, perSourceSize);
@@ -89,22 +82,38 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     (event) => event.location && event.image && event.dateTime
   );
 
-  // Sort and limit to exact size
-  mergedResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-  const finalResults = mergedResults.slice(0, size);
 
-  console.log(finalResults, "filtered results");
+    
+  // Fetch interaction data for each event
+  const finalResults = await Promise.all(
+    
+    mergedResults.map(async (event) => {
+      console.log(event.id, userData.id,'hello')
+      const attendanceData = await eventService.getEventDetails({ externalId: event.id, userId: userData.id });
+      return {
+        ...event,
+        interaction: attendanceData?.data?.interaction || { isLiked: false, isGoing: false },
+      };
+    })
+  );
+
+  // Sort and limit to exact size
+  finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  const paginatedResults = finalResults.slice(0, size);
+
+  console.log(paginatedResults, "filtered results");
 
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
     data: {
       page,
-      total: finalResults.length,
-      results: finalResults,
+      total: paginatedResults.length,
+      results: paginatedResults,
     },
   });
 });
+
 
 
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
