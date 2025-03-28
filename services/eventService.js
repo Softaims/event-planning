@@ -631,7 +631,13 @@ exports.filterEventsByUserPreferences = async (userPreferences, events) => {
 };
 
 exports.getEventAttendance = async (eventId, currentUser) => {
-  if (!eventId) throw new Error("Event ID is required");
+  if (!eventId) {
+    return {
+      status: "error",
+      message: "Event ID is required",
+      data: null,
+    };
+  }
 
   // Find the event using the externalId
   const event = await prisma.event.findUnique({
@@ -640,7 +646,14 @@ exports.getEventAttendance = async (eventId, currentUser) => {
   });
 
   if (!event) {
-    throw new Error("Event not found");
+    return {
+      status: "success",
+      message: "Event not found",
+      data: {
+        totalAttendees: 0,
+        attendees: [],
+      },
+    };
   }
 
   // Fetch all attendees who are going to the event
@@ -687,8 +700,12 @@ exports.getEventAttendance = async (eventId, currentUser) => {
   });
 
   return {
-    totalAttendees: attendance.length,
-    attendees: attendeesWithMatches,
+    status: "success",
+    message: "Attendance fetched successfully.",
+    data: {
+      totalAttendees: attendance.length,
+      attendees: attendeesWithMatches,
+    },
   };
 };
 
