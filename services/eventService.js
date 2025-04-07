@@ -290,6 +290,32 @@ exports.getEventDetails = async ({ externalId, userId }) => {
   };
 };
 
+
+exports.getInteractionDetails = async ({ externalId, userId }) => {
+  if (!externalId || !userId) {
+    throw new Error("External ID and User ID are required");
+  }
+
+  const interaction = await prisma.eventAttendance.findFirst({
+    where: {
+      externalId,
+      userId,
+    },
+  });
+
+  if (!interaction) {
+    return { isLiked: false, isGoing: false }; // return default interaction
+  }
+
+  // Only return required fields
+  return {
+    isLiked: interaction.isLiked,
+    isGoing: interaction.isGoing,
+  };
+};
+
+
+
 exports.createEvent = async ({ userId, eventData }) => {
   const event = await prisma.event.create({
     data: {

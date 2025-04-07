@@ -86,16 +86,27 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     
   // Fetch interaction data for each event
   const finalResults = await Promise.all(
-    
     mergedResults.map(async (event) => {
-      console.log(event.id, userData.id,'hello')
-      const attendanceData = await eventService.getEventDetails({ externalId: event.id, userId: userData.id });
-      return {
-        ...event,
-        interaction: attendanceData?.data?.interaction || { isLiked: false, isGoing: false },
-      };
+      try {
+        const attendanceData = await eventService.getInteractionDetails({
+          externalId: event.id,
+          userId: userData.id,
+        });
+  
+        return {
+          ...event,
+          interaction: attendanceData || { isLiked: false, isGoing: false },
+        };
+      } catch (err) {
+        // fallback if interaction not found or error happens
+        return {
+          ...event,
+          interaction: { isLiked: false, isGoing: false },
+        };
+      }
     })
   );
+  
 
   // Sort and limit to exact size
   finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
