@@ -38,6 +38,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     longitude = userData?.long;
   }
 
+  console.log(req.query, 'query ------------------------>>>>>>>>>>>>data')
   // Calculate sizes for each source
   const perSourceSize = Math.floor(size / 3);
   const remainingSize = size % 3;
