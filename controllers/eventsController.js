@@ -78,9 +78,9 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   ];
 
   // Filter out objects with null location, image, or dateTime
-  mergedResults = mergedResults.filter(
-    (event) => event.location && event.image && event.dateTime
-  );
+  // mergedResults = mergedResults.filter(
+  //   (event) => event.location && event.image && event.dateTime
+  // );
 
 
     
@@ -109,7 +109,14 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   
 
   // Sort and limit to exact size
-  finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  // finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  finalResults.sort((a, b) => {
+    if (!a.dateTime) return 1;  // push a to the end
+    if (!b.dateTime) return -1; // push b to the end
+    return new Date(a.dateTime) - new Date(b.dateTime);
+  });
+  
   const paginatedResults = finalResults.slice(0, size);
 
   console.log(paginatedResults, "filtered results");
