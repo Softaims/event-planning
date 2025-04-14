@@ -11,24 +11,140 @@ const path = require("path");
 const fs = require("fs");
 const s3Service = require("../utils/s3Service");
 
+// exports.getEvents = catchAsync(async (req, res, next) => {
+//   let {
+//     query,
+//     placeCategory,
+//     city = "",
+//     eventCategory = "",
+//     size = 10,
+//     page = 0,
+//     latitude,
+//     longitude,
+//     radius,
+//   } = req.query;
+
+//   size = parseInt(size, 10);
+//   page = parseInt(page, 10);
+
+//   if (isNaN(page) || page < 1) page = 1;
+//   if (isNaN(size) || size < 1) size = 10;
+
+//   const userId = req.user.id;
+//   const userData = await authService.findUserById(userId);
+
+//   if (!latitude || !longitude) {
+//     latitude = userData?.lat;
+//     longitude = userData?.long;
+//   }
+
+//   console.log(req.query, 'query ------------------------>>>>>>>>>>>>data')
+//   // Calculate sizes for each source
+//   const perSourceSize = Math.floor(size / 3);
+//   const remainingSize = size % 3;
+
+//   const [events, places, eventsFromDb] = await Promise.all([
+//     eventService.fetchTicketmasterEvents({
+//       query,
+//       city,
+//       eventCategory,
+//       size: perSourceSize + (remainingSize > 0 ? 1 : 0),
+//       page,
+//       latitude,
+//       longitude,
+//       radius,
+//     }),
+//     eventService.fetchGooglePlaces({
+//       query,
+//       placeCategory,
+//       city,
+//       page,
+//       latitude,
+//       longitude,
+//       radius,
+//       size: perSourceSize + (remainingSize > 1 ? 1 : 0),
+//     }),
+//     eventService.getEventsFromDb(),
+//   ]);
+
+//   const latestFilteredEvents = eventsFromDb
+//     .filter((event) => event.createdAt)
+//     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+//     .slice(0, perSourceSize);
+
+//   let mergedResults = [
+//     ...events.map((event) => ({ ...eventDto(event) })),
+//     ...latestFilteredEvents.map((event) => ({ ...dbEventDto(event) })),
+//     ...places.map((place) => ({ ...placeDto(place) })),
+//   ];
+
+//   // Filter out objects with null location, image, or dateTime
+//   // mergedResults = mergedResults.filter(
+//   //   (event) => event.location && event.image && event.dateTime
+//   // );
+
+
+    
+//   // Fetch interaction data for each event
+//   const finalResults = await Promise.all(
+//     mergedResults.map(async (event) => {
+//       try {
+//         const attendanceData = await eventService.getInteractionDetails({
+//           externalId: event.id,
+//           userId: userData.id,
+//         });
+  
+//         return {
+//           ...event,
+//           interaction: attendanceData || { isLiked: false, isGoing: false },
+//         };
+//       } catch (err) {
+//         // fallback if interaction not found or error happens
+//         return {
+//           ...event,
+//           interaction: { isLiked: false, isGoing: false },
+//         };
+//       }
+//     })
+//   );
+  
+
+//   // Sort and limit to exact size
+//   // finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+//   finalResults.sort((a, b) => {
+//     if (!a.dateTime) return 1;  // push a to the end
+//     if (!b.dateTime) return -1; // push b to the end
+//     return new Date(a.dateTime) - new Date(b.dateTime);
+//   });
+  
+//   const paginatedResults = finalResults.slice(0, size);
+
+//   console.log(paginatedResults, "filtered results");
+
+//   res.status(200).json({
+//     status: "success",
+//     message: "Events and places fetched successfully.",
+//     data: {
+//       page,
+//       total: paginatedResults.length,
+//       results: paginatedResults,
+//     },
+//   });
+// });
+
+
+// ------------------------my code -----------------------------//
 exports.getEvents = catchAsync(async (req, res, next) => {
   let {
     query,
     placeCategory,
     city = "",
     eventCategory = "",
-    size = 10,
-    page = 0,
     latitude,
     longitude,
-    radius,
+    radius = 200, // ✅ Default radius
   } = req.query;
-
-  size = parseInt(size, 10);
-  page = parseInt(page, 10);
-
-  if (isNaN(page) || page < 1) page = 1;
-  if (isNaN(size) || size < 1) size = 10;
 
   const userId = req.user.id;
   const userData = await authService.findUserById(userId);
@@ -38,18 +154,13 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     longitude = userData?.long;
   }
 
-  console.log(req.query, 'query ------------------------>>>>>>>>>>>>data')
-  // Calculate sizes for each source
-  const perSourceSize = Math.floor(size / 3);
-  const remainingSize = size % 3;
+  console.log(req.query, "query ------------------------>>>>>>>>>>>>data");
 
   const [events, places, eventsFromDb] = await Promise.all([
     eventService.fetchTicketmasterEvents({
       query,
       city,
       eventCategory,
-      size: perSourceSize + (remainingSize > 0 ? 1 : 0),
-      page,
       latitude,
       longitude,
       radius,
@@ -58,34 +169,38 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       query,
       placeCategory,
       city,
-      page,
       latitude,
       longitude,
       radius,
-      size: perSourceSize + (remainingSize > 1 ? 1 : 0),
     }),
     eventService.getEventsFromDb(),
   ]);
 
+  const now = new Date();
+
   const latestFilteredEvents = eventsFromDb
-    .filter((event) => event.createdAt)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, perSourceSize);
+    .filter((event) => new Date(event.dateTime) > now) // ✅ Only future events
+    .map((event) => ({ ...dbEventDto(event) }));
 
-  let mergedResults = [
-    ...events.map((event) => ({ ...eventDto(event) })),
-    ...latestFilteredEvents.map((event) => ({ ...dbEventDto(event) })),
-    ...places.map((place) => ({ ...placeDto(place) })),
-  ];
+  const ticketmasterEvents = events
+    .filter((event) => new Date(event.dates?.start?.dateTime) > now)
+    .map((event) => ({ ...eventDto(event) }));
 
-  // Filter out objects with null location, image, or dateTime
-  // mergedResults = mergedResults.filter(
-  //   (event) => event.location && event.image && event.dateTime
-  // );
+  const googlePlaces = places.map((place) => ({ ...placeDto(place) }));
 
+  // ✅ Merge all results
+  let mergedResults = [...ticketmasterEvents, ...latestFilteredEvents, ...googlePlaces];
 
-    
-  // Fetch interaction data for each event
+  // ✅ Add distance from user
+  mergedResults = mergedResults.map((item) => {
+    if (item.latitude && item.longitude) {
+      const distance = getDistanceFromLatLonInKm(latitude, longitude, item.latitude, item.longitude);
+      return { ...item, distance };
+    }
+    return { ...item, distance: Number.MAX_SAFE_INTEGER };
+  });
+
+  // ✅ Add interaction data
   const finalResults = await Promise.all(
     mergedResults.map(async (event) => {
       try {
@@ -93,13 +208,12 @@ exports.getEvents = catchAsync(async (req, res, next) => {
           externalId: event.id,
           userId: userData.id,
         });
-  
+
         return {
           ...event,
           interaction: attendanceData || { isLiked: false, isGoing: false },
         };
       } catch (err) {
-        // fallback if interaction not found or error happens
         return {
           ...event,
           interaction: { isLiked: false, isGoing: false },
@@ -107,31 +221,49 @@ exports.getEvents = catchAsync(async (req, res, next) => {
       }
     })
   );
-  
 
-  // Sort and limit to exact size
-  // finalResults.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-
+  // ✅ Sort by date first, then by proximity
   finalResults.sort((a, b) => {
-    if (!a.dateTime) return 1;  // push a to the end
-    if (!b.dateTime) return -1; // push b to the end
-    return new Date(a.dateTime) - new Date(b.dateTime);
+    const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
+    const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
+    if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+    return a.distance - b.distance;
   });
-  
-  const paginatedResults = finalResults.slice(0, size);
-
-  console.log(paginatedResults, "filtered results");
 
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
     data: {
-      page,
-      total: paginatedResults.length,
-      results: paginatedResults,
+      results: finalResults,
     },
   });
 });
+
+
+
+
+// 🔍 Haversine formula helper
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const deg2rad = (deg) => deg * (Math.PI / 180);
+  const R = 6371; // Radius of the earth in km
+
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  return distance; // in km
+}
+
+
 
 
 
