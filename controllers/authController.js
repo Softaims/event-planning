@@ -10,6 +10,7 @@ const { prisma } = require("../db");
 const twilioService = require("../utils/twilioService");
 const s3Service = require("../utils/s3Service");
 const { getDefaultPreferences } = require("../utils/preferencesHelper");
+const {sendNotification} = require("../services/sendNotification")
 
 exports.register = catchAsync(async (req, res, next) => {
   let {
@@ -289,6 +290,11 @@ exports.login = catchAsync(async (req, res, next) => {
       data: { fcmToken: fcmToken },
     });
   }
+  // Send welcome notification
+await sendNotification(user.id, {
+  title: "Welcome to UNI 🎉",
+  body: "Dive into exciting events and discover something new every day!",
+});
 
   authService.createSendToken(
     res,

@@ -1,7 +1,7 @@
 const catchAsync = require('../utils/catchAsync');
 const preferencesService = require('../services/preferencesService');
 const userDto = require('../dtos/userDto');
-
+const {sendNotification} = require("../services/sendNotification")
 // Update Preferences
 exports.updatePreferences = catchAsync(async (req, res, next) => {
     const userId = req.user.id;
@@ -9,6 +9,12 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
 
     // Call service to update preferences
     const updatedPreferences = await preferencesService.updatePreferences(userId, preferences);
+
+    await sendNotification(user.id, {
+      title: "Welcome to UNI 🎉",
+      body: "Dive into exciting events and discover something new every day!",
+    });
+
 
     res.status(200).json({
         status: 'success',
