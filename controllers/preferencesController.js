@@ -10,7 +10,7 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
     // Call service to update preferences
     const updatedPreferences = await preferencesService.updatePreferences(userId, preferences);
 
-    await sendNotification(user.id, {
+    await sendNotification(userId, {
       title: "Welcome to UNI 🎉",
       body: "Dive into exciting events and discover something new every day!",
     });
