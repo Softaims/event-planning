@@ -167,6 +167,116 @@ const formatMultipleParams = (param) => {
 // };
 
 
+// ------------- my old function till 21 april 
+
+
+
+// exports.fetchTicketmasterEvents = async ({
+//   query,
+//   city,
+//   latitude,
+//   longitude,
+//   eventCategory,
+//   radius = 200,
+// }) => {
+//   try {
+//     const formattedEventCategory = formatMultipleParams(eventCategory);
+//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+//     const params = {
+//       apikey: process.env.TICKETMASTER_API_KEY,
+//       ...(latlong && { latlong }),
+//       ...(formattedEventCategory && formattedEventCategory !== "*" && {
+//         classificationName: formattedEventCategory,
+//       }),
+//       locale: "*",
+//       radius,
+//       size: 200,
+//     };
+
+//     console.log("🔍 Ticketmaster API Request Params:", params);
+
+//     const response = await axios.get(TICKET_MASTER_URL, { params });
+//     const events = response.data._embedded?.events || [];
+
+//     const now = new Date();
+//     const futureEvents = events.filter(
+//       (event) => new Date(event.dates?.start?.dateTime) > now
+//     );
+
+//     console.log(`✅ Fetched ${futureEvents.length} future events`);
+//     return futureEvents;
+//   } catch (error) {
+//     logger.error("Error fetching Ticketmaster events:", error);
+//     throw new AppError("Failed to fetch events from Ticketmaster", 500);
+//   }
+// };
+
+
+// ------------- my old function till 21 april 
+
+
+// ------------- my new function from 21 april 
+
+
+const categoryConfig = {
+  Festival: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAeE" },
+  Food: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAI" },
+  "Health & Wellness": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAl" },
+  Seminar: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAJe" },
+  "Club": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAa" },
+  "Music/Concert": { classificationId: "KZFzniwnSyZfZ7v7nJ" },
+  Sport: { classificationId: "KZFzniwnSyZfZ7v7nE" },
+  "Arts & Theatre": { classificationId: "KZFzniwnSyZfZ7v7na" },
+  Film: { classificationId: "KZFzniwnSyZfZ7v7nn" },
+  Other: { classificationId: "KZFzniwnSyZfZ7v7n1" },
+};
+
+// exports.fetchTicketmasterEvents = async ({
+//   query,
+//   city,
+//   latitude,
+//   longitude,
+//   eventCategory,
+//   radius = 200,
+// }) => {
+//   try {
+//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+//     const category = eventCategory || "Other";
+//     const categoryData = categoryConfig[category] || categoryConfig["Other"];
+
+//     const params = {
+//       apikey: process.env.TICKETMASTER_API_KEY,
+//       locale: "*",
+//       size: 200,
+//       radius,
+//       ...(latlong && { latlong }),
+//       ...(categoryData.classificationId && { classificationId: categoryData.classificationId }),
+//       ...(categoryData.genreId && { genreId: categoryData.genreId }),
+//       ...(query && { keyword: query }),
+//     };
+
+//     console.log("🎫 Ticketmaster API Params:", params);
+
+//     const response = await axios.get(TICKET_MASTER_URL, { params });
+//     const events = response.data._embedded?.events || [];
+
+//     const now = new Date();
+
+//     const filteredEvents = events.filter((event) => {
+//       const date = new Date(event.dates?.start?.dateTime);
+//       const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
+//       return date > now && (!city || venueCity.includes(city.toLowerCase()));
+//     });
+
+//     console.log(`✅ Fetched ${filteredEvents.length} events from Ticketmaster`);
+//     return filteredEvents;
+//   } catch (error) {
+//     logger.error("❌ Error fetching Ticketmaster events:", error);
+//     throw new AppError("Failed to fetch events from Ticketmaster", 500);
+//   }
+// };
 
 exports.fetchTicketmasterEvents = async ({
   query,
@@ -177,37 +287,44 @@ exports.fetchTicketmasterEvents = async ({
   radius = 200,
 }) => {
   try {
-    const formattedEventCategory = formatMultipleParams(eventCategory);
     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+    const categoryData = eventCategory ? categoryConfig[eventCategory] : null;
 
     const params = {
       apikey: process.env.TICKETMASTER_API_KEY,
-      ...(latlong && { latlong }),
-      ...(formattedEventCategory && formattedEventCategory !== "*" && {
-        classificationName: formattedEventCategory,
-      }),
       locale: "*",
-      radius,
       size: 200,
+      radius,
+      ...(latlong && { latlong }),
+      ...(query && { keyword: query }),
+      ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
+      ...(categoryData?.genreId && { genreId: categoryData.genreId }),
     };
 
-    console.log("🔍 Ticketmaster API Request Params:", params);
+    console.log("🎫 Ticketmaster API Params:", params);
 
     const response = await axios.get(TICKET_MASTER_URL, { params });
     const events = response.data._embedded?.events || [];
 
     const now = new Date();
-    const futureEvents = events.filter(
-      (event) => new Date(event.dates?.start?.dateTime) > now
-    );
 
-    console.log(`✅ Fetched ${futureEvents.length} future events`);
-    return futureEvents;
+    const filteredEvents = events.filter((event) => {
+      const date = new Date(event.dates?.start?.dateTime);
+      const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
+      return date > now && (!city || venueCity.includes(city.toLowerCase()));
+    });
+
+    console.log(`✅ Fetched ${filteredEvents.length} events from Ticketmaster`);
+    return filteredEvents;
   } catch (error) {
-    logger.error("Error fetching Ticketmaster events:", error);
+    logger.error("❌ Error fetching Ticketmaster events:", error);
     throw new AppError("Failed to fetch events from Ticketmaster", 500);
   }
 };
+
+
+// ------------- my new function from 21 april 
 
 exports.fetchGooglePlaces = async ({
   query,

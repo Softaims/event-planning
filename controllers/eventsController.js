@@ -482,12 +482,167 @@ const s3Service = require("../utils/s3Service");
 
 const USE_STRING_MATCHING = true; // Enable fuzzy match for title variations
 
+// exports.getEvents = catchAsync(async (req, res, next) => {
+//   let {
+//     query,
+//     placeCategory,
+//     city = "",
+//     eventCategory = "",
+//     latitude,
+//     longitude,
+//     radius = 200,
+//   } = req.query;
+
+//   const userId = req.user.id;
+//   const userData = await authService.findUserById(userId);
+
+//   if (!latitude || !longitude) {
+//     latitude = userData?.lat;
+//     longitude = userData?.long;
+//   }
+
+//   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
+//     eventService.fetchTicketmasterEvents({
+//       query,
+//       city,
+//       eventCategory,
+//       latitude,
+//       longitude,
+//       radius,
+//     }),
+//     eventService.fetchGooglePlaces({
+//       query,
+//       placeCategory,
+//       city,
+//       latitude,
+//       longitude,
+//       radius,
+//     }),
+//     eventService.getEventsFromDb(),
+//   ]);
+
+//   const now = new Date();
+
+//   const ticketmasterEvents = ticketmasterRaw
+//     .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+//     .map((e) => eventDto(e));
+
+//   const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+//   const dbEvents = dbEventsRaw
+//     .filter((e) => new Date(e.dateTime) > now)
+//     .map((e) => dbEventDto(e));
+
+//   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
+
+//   // Remove duplicates using composite key + optional string similarity
+//   const seenKeys = new Set();
+//   const dedupedEvents = [];
+
+//   for (let event of allEvents) {
+//     const dateKey = event.dateTime
+//       ? new Date(event.dateTime).toDateString()
+//       : "unknown";
+//     const locationKey = (event.location || "").toLowerCase().trim();
+//     const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
+
+//     const isDuplicate = seenKeys.has(uniqueKey);
+
+//     // If not duplicate by ID+date+venue
+//     if (!isDuplicate) {
+//       // Optional fuzzy match for similar titles
+//       if (USE_STRING_MATCHING) {
+//         const isSimilar = dedupedEvents.some((existing) => {
+//           const sameDate =
+//             (existing.dateTime &&
+//               event.dateTime &&
+//               new Date(existing.dateTime).toDateString() ===
+//                 new Date(event.dateTime).toDateString()) ||
+//             false;
+
+//           const sameVenue =
+//             (existing.location || "").toLowerCase() === locationKey;
+
+//           const titleSimilarity = stringSimilarity.compareTwoStrings(
+//             existing.name || "",
+//             event.name || ""
+//           );
+
+//           return sameDate && sameVenue && titleSimilarity > 0.8;
+//         });
+
+//         if (!isSimilar) {
+//           seenKeys.add(uniqueKey);
+//           dedupedEvents.push(event);
+//         }
+//       } else {
+//         seenKeys.add(uniqueKey);
+//         dedupedEvents.push(event);
+//       }
+//     }
+//   }
+
+//   // Add distance info
+//   const enrichedEvents = dedupedEvents.map((event) => {
+//     const distance =
+//       event.latitude && event.longitude
+//         ? getDistanceFromLatLonInKm(
+//             parseFloat(latitude),
+//             parseFloat(longitude),
+//             event.latitude,
+//             event.longitude
+//           )
+//         : Number.MAX_SAFE_INTEGER;
+
+//     return { ...event, distance };
+//   });
+
+//   // Add interaction data
+//   const finalResults = await Promise.all(
+//     enrichedEvents.map(async (event) => {
+//       try {
+//         const interaction = await eventService.getInteractionDetails({
+//           externalId: event.id,
+//           userId: userData.id,
+//         });
+
+//         return {
+//           ...event,
+//           interaction: interaction || { isLiked: false, isGoing: false },
+//         };
+//       } catch (err) {
+//         return {
+//           ...event,
+//           interaction: { isLiked: false, isGoing: false },
+//         };
+//       }
+//     })
+//   );
+
+//   // Sort by date first, then distance
+//   finalResults.sort((a, b) => {
+//     const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
+//     const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
+//     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+//     return a.distance - b.distance;
+//   });
+
+//   res.status(200).json({
+//     status: "success",
+//     message: "Events and places fetched successfully.",
+//     data: {
+//       results: finalResults,
+//     },
+//   });
+// });
+
+
 exports.getEvents = catchAsync(async (req, res, next) => {
   let {
     query,
     placeCategory,
     city = "",
-    eventCategory = "",
+    eventCategory,
     latitude,
     longitude,
     radius = 200,
@@ -501,23 +656,36 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     longitude = userData?.long;
   }
 
+  // Normalize values (treat empty string as undefined)
+  eventCategory = eventCategory?.trim() || undefined;
+  placeCategory = placeCategory?.trim() || undefined;
+
+  const shouldCallTicketmaster = !!eventCategory || (!eventCategory && !placeCategory);
+  const shouldCallGooglePlaces = !!placeCategory || (!eventCategory && !placeCategory);
+
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
-    eventService.fetchTicketmasterEvents({
-      query,
-      city,
-      eventCategory,
-      latitude,
-      longitude,
-      radius,
-    }),
-    eventService.fetchGooglePlaces({
-      query,
-      placeCategory,
-      city,
-      latitude,
-      longitude,
-      radius,
-    }),
+    shouldCallTicketmaster
+      ? eventService.fetchTicketmasterEvents({
+          query: eventCategory ? query : "",
+          city,
+          eventCategory,
+          latitude,
+          longitude,
+          radius,
+        })
+      : Promise.resolve([]),
+
+    shouldCallGooglePlaces
+      ? eventService.fetchGooglePlaces({
+          query: placeCategory ? query : "",
+          placeCategory,
+          city,
+          latitude,
+          longitude,
+          radius,
+        })
+      : Promise.resolve([]),
+
     eventService.getEventsFromDb(),
   ]);
 
@@ -548,9 +716,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
 
     const isDuplicate = seenKeys.has(uniqueKey);
 
-    // If not duplicate by ID+date+venue
     if (!isDuplicate) {
-      // Optional fuzzy match for similar titles
       if (USE_STRING_MATCHING) {
         const isSimilar = dedupedEvents.some((existing) => {
           const sameDate =
