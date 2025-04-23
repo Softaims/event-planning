@@ -1005,7 +1005,7 @@ exports.createEvent = catchAsync(async (req, res, next) => {
   };
 
   let imageUrl = null;
-
+console.log(imageUrl, 'image')
   // Handle image upload
   if (req.file) {
     const eventNameSanitized = req.body.name.replace(/[^a-zA-Z0-9-_ ]/g, ""); // Remove invalid characters
