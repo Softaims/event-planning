@@ -332,10 +332,11 @@ exports.fetchGooglePlaces = async ({
   longitude,
   placeCategory,
   city,
-  radius = 5000,
+  radius,
   size = 200,
 }) => {
   try {
+    console.log(radius, 'radiu')
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
       throw new AppError("Google Places API key is missing", 500);
@@ -351,9 +352,12 @@ exports.fetchGooglePlaces = async ({
       url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
         query
       )}&location=${latitude},${longitude}&radius=${radius}`;
+      console.log(url,'rul')
       if (city) url += ` in ${encodeURIComponent(city)}`;
     } else {
       url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
+      console.log(url,'rul')
+
     }
 
     if (placeCategory) {
@@ -378,7 +382,7 @@ exports.fetchGooglePlaces = async ({
 exports.getEventsFromDb = async () => {
   return await prisma.event.findMany({
     where: {
-      source: "uni",
+      source: "UNI Featured",
     },
     orderBy: {
       createdAt: "desc",
@@ -580,6 +584,7 @@ exports.handleInteraction = async ({
   eventId,  // This is the externalId from the frontend
   isLiked,
   isGoing,
+  isShare,
   eventData,
 }) => {
   let event = null;
@@ -605,6 +610,8 @@ exports.handleInteraction = async ({
         ageMax: eventData.ageMax || null,
         ticketUrls: eventData.ticketUrls || [],
         preferences: eventData.preferences || null,
+        latitude: eventData.latitude || null,
+        longitude : eventData.longitude || null
       },
     });
   }
@@ -619,6 +626,7 @@ exports.handleInteraction = async ({
   const updateData = {};
   if (isLiked !== undefined) updateData.isLiked = isLiked;
   if (isGoing !== undefined) updateData.isGoing = isGoing;
+  if (isShare !== undefined) updateData.isShare = isGoing;
 
   let attendanceRecord;
   if (existingAttendance) {
@@ -635,6 +643,8 @@ exports.handleInteraction = async ({
         userId: userId,
         isLiked: isLiked ?? false,
         isGoing: isGoing ?? false,
+        isShare: isShare ?? false,
+
       },
     });
   }
@@ -643,6 +653,9 @@ exports.handleInteraction = async ({
     await notifyPopularEvent(eventId, event?.name);
   }
   if (isLiked) {
+    await popularByPreferences(eventId, event?.name)
+  } 
+  if (isShare) {
     await popularByPreferences(eventId, event?.name)
   } 
   return attendanceRecord;
@@ -654,7 +667,7 @@ exports.getUserEvents = async (userId) => {
   const events = await prisma.event.findMany({
     where: {
       userId: userId,
-      source: "uni",
+      source: "UNI Featured",
     },
     orderBy: {
       createdAt: "desc",

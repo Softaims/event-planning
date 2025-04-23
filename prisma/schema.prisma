@@ -33,7 +33,7 @@ model User {
   preferences                   Json?
   isRegistrationComplete        Boolean                   @default(false)
   lat                           Float?
-  location                      Unsupported("geography")?
+  // location                      Unsupported("geography")?
   long                          Float?
   isProfilePublic               Boolean                   @default(true)
   fcmToken                      String?
@@ -49,6 +49,7 @@ model EventAttendance {
   createdAt  DateTime @default(now())
   isGoing    Boolean  @default(false)
   isLiked    Boolean  @default(false)
+  isShare   Boolean  @default(false)
   event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
 
@@ -65,6 +66,8 @@ model Event {
   location         String?
   ageMin           Int?
   ageMax           Int?
+  latitude  Float?
+longitude Float?
   ticketUrls       String[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt

@@ -760,6 +760,17 @@ const eventValidations = {
       .isInt({ min: 0, max: 100 })
       .withMessage("Maximum age must be between 0 and 100."),
 
+
+      check("latitude")
+      .optional()
+      .isFloat({ min: -90, max: 90 })
+      .withMessage("Invalid latitude value."),
+
+    check("longitude")
+      .optional()
+      .isFloat({ min: -180, max: 180 })
+      .withMessage("Invalid longitude value."),
+
       check("ticketUrl")
       .optional()
       .isString()
@@ -852,6 +863,16 @@ const eventValidations = {
     //     }
     //     return true;
     //   }),
+    check("latitude")
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage("Invalid latitude value."),
+
+  check("longitude")
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage("Invalid longitude value."),
+
     check("ticketUrl")
       .optional()
       .isString()

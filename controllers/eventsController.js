@@ -1,6 +1,7 @@
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
+const { prisma } = require("../db");
 const { eventDto } = require("../dtos/eventDto");
 const { placeDto } = require("../dtos/placeDto");
 const { dbEventDto } = require("../dtos/dbEventDto");
@@ -249,392 +250,10 @@ const s3Service = require("../utils/s3Service");
 // ------------------------new working code from 21 april 2025-----------------------------//
 
 
-// exports.getEvents = catchAsync(async (req, res, next) => {
-//   let {
-//     query,
-//     placeCategory,
-//     city = "",
-//     eventCategory = "",
-//     latitude,
-//     longitude,
-//     radius = 200,
-//   } = req.query;
-
-//   const userId = req.user.id;
-//   const userData = await authService.findUserById(userId);
-
-//   if (!latitude || !longitude) {
-//     latitude = userData?.lat;
-//     longitude = userData?.long;
-//   }
-
-//   const [events, places, eventsFromDb] = await Promise.all([
-//     eventService.fetchTicketmasterEvents({
-//       query,
-//       city,
-//       eventCategory,
-//       latitude,
-//       longitude,
-//       radius,
-//     }),
-//     eventService.fetchGooglePlaces({
-//       query,
-//       placeCategory,
-//       city,
-//       latitude,
-//       longitude,
-//       radius,
-//     }),
-//     eventService.getEventsFromDb(),
-//   ]);
-
-//   const now = new Date();
-
-//   const latestFilteredEvents = eventsFromDb
-//     .filter((event) => new Date(event.dateTime) > now)
-//     .map((event) => ({ ...dbEventDto(event) }));
-
-//   const ticketmasterEvents = events
-//     .filter((event) => new Date(event.dates?.start?.dateTime) > now)
-//     .map((event) => ({ ...eventDto(event) }));
-
-//   const googlePlaces = places.map((place) => ({ ...placeDto(place) }));
-
-//   // ✅ Merge all results
-//   let mergedResults = [...ticketmasterEvents, ...latestFilteredEvents, ...googlePlaces];
-
-//   // ✅ Deduplication logic
-//   const seen = [];
-//   const uniqueEvents = [];
-
-//   for (const event of mergedResults) {
-//     const title = event.name || event.title || "";
-//     const date = event.date || event.dateTime || "";
-//     const venue = event.venue || event.venueName || "";
-
-//     const key = `${event.id}_${date}_${venue.toLowerCase().trim()}`;
-//     const isDuplicate = seen.some((existing) =>
-//       existing.date === date &&
-//       existing.venue.toLowerCase() === venue.toLowerCase() &&
-//       stringSimilarity.compareTwoStrings(existing.title, title) > 0.7
-//     );
-
-//     if (!isDuplicate) {
-//       console.log("Hi------------------------------")
-//       seen.push({ key, title, date, venue });
-//       uniqueEvents.push(event);
-//     }
-//   }
-
-//   // ✅ Add distance from user
-//   let resultsWithDistance = uniqueEvents.map((item) => {
-//     if (item.latitude && item.longitude) {
-//       const distance = getDistanceFromLatLonInKm(latitude, longitude, item.latitude, item.longitude);
-//       return { ...item, distance };
-//     }
-//     return { ...item, distance: Number.MAX_SAFE_INTEGER };
-//   });
-
-//   // ✅ Add interaction data
-//   const finalResults = await Promise.all(
-//     resultsWithDistance.map(async (event) => {
-//       try {
-//         const attendanceData = await eventService.getInteractionDetails({
-//           externalId: event.id,
-//           userId: userData.id,
-//         });
-
-//         return {
-//           ...event,
-//           interaction: attendanceData || { isLiked: false, isGoing: false },
-//         };
-//       } catch (err) {
-//         return {
-//           ...event,
-//           interaction: { isLiked: false, isGoing: false },
-//         };
-//       }
-//     })
-//   );
-
-//   // ✅ Sort by date first, then by proximity
-//   finalResults.sort((a, b) => {
-//     const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
-//     const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
-//     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
-//     return a.distance - b.distance;
-//   });
-
-//   res.status(200).json({
-//     status: "success",
-//     message: "Events and places fetched successfully.",
-//     data: {
-//       results: finalResults,
-//     },
-//   });
-// });
+const USE_STRING_MATCHING = true; // Enable fuzzy match for title variation
 
 
-// exports.getEvents = catchAsync(async (req, res, next) => {
-//   let {
-//     query,
-//     placeCategory,
-//     city = "",
-//     eventCategory = "",
-//     latitude,
-//     longitude,
-//     radius = 200, // Default radius
-//   } = req.query;
-
-//   const userId = req.user.id;
-//   const userData = await authService.findUserById(userId);
-
-//   if (!latitude || !longitude) {
-//     latitude = userData?.lat;
-//     longitude = userData?.long;
-//   }
-
-//   const now = new Date();
-
-//   // Fetch from all 3 sources
-//   const [ticketmasterRaw, googleRaw, dbRaw] = await Promise.all([
-//     eventService.fetchTicketmasterEvents({ query, city, eventCategory, latitude, longitude, radius }),
-//     eventService.fetchGooglePlaces({ query, placeCategory, city, latitude, longitude, radius }),
-//     eventService.getEventsFromDb(),
-//   ]);
-
-//   // Normalize and filter future events
-//   const ticketmasterEvents = ticketmasterRaw
-//     .filter((event) => new Date(event.dates?.start?.dateTime) > now)
-//     .map((event) => ({ ...eventDto(event) }));
-
-//   const googlePlaces = googleRaw
-//     .map((place) => ({ ...placeDto(place) }));
-
-//   const dbEvents = dbRaw
-//     .filter((event) => new Date(event.dateTime) > now)
-//     .map((event) => ({ ...dbEventDto(event) }));
-
-//   // Merge all
-//   let mergedResults = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
-
-//   // Add distance from user
-//   mergedResults = mergedResults.map((item) => {
-//     if (item.latitude && item.longitude) {
-//       const distance = getDistanceFromLatLonInKm(latitude, longitude, item.latitude, item.longitude);
-//       return { ...item, distance };
-//     }
-//     return { ...item, distance: Number.MAX_SAFE_INTEGER };
-//   });
-
-//   // ✅ Composite Key Deduplication (id + dateTime + location)
-//   const seenKeys = new Set();
-//   const uniqueEvents = [];
-
-//   for (const event of mergedResults) {
-//     const key = `${event.id}_${event.dateTime}_${event.location?.toLowerCase() || ""}`;
-//     if (!seenKeys.has(key)) {
-//       seenKeys.add(key);
-//       uniqueEvents.push(event);
-//     }
-//   }
-
-//   // Add user interaction (like & going)
-//   const finalResults = await Promise.all(
-//     uniqueEvents.map(async (event) => {
-//       try {
-//         const attendanceData = await eventService.getInteractionDetails({
-//           externalId: event.id,
-//           userId: userData.id,
-//         });
-
-//         return {
-//           ...event,
-//           interaction: attendanceData || { isLiked: false, isGoing: false },
-//         };
-//       } catch {
-//         return {
-//           ...event,
-//           interaction: { isLiked: false, isGoing: false },
-//         };
-//       }
-//     })
-//   );
-
-//   // Sort by date first, then by distance
-//   finalResults.sort((a, b) => {
-//     const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
-//     const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
-//     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
-//     return a.distance - b.distance;
-//   });
-
-//   res.status(200).json({
-//     status: "success",
-//     message: "Events and places fetched successfully.",
-//     data: {
-//       results: finalResults,
-//     },
-//   });
-// });
-
-
-
-const USE_STRING_MATCHING = true; // Enable fuzzy match for title variations
-
-// exports.getEvents = catchAsync(async (req, res, next) => {
-//   let {
-//     query,
-//     placeCategory,
-//     city = "",
-//     eventCategory = "",
-//     latitude,
-//     longitude,
-//     radius = 200,
-//   } = req.query;
-
-//   const userId = req.user.id;
-//   const userData = await authService.findUserById(userId);
-
-//   if (!latitude || !longitude) {
-//     latitude = userData?.lat;
-//     longitude = userData?.long;
-//   }
-
-//   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
-//     eventService.fetchTicketmasterEvents({
-//       query,
-//       city,
-//       eventCategory,
-//       latitude,
-//       longitude,
-//       radius,
-//     }),
-//     eventService.fetchGooglePlaces({
-//       query,
-//       placeCategory,
-//       city,
-//       latitude,
-//       longitude,
-//       radius,
-//     }),
-//     eventService.getEventsFromDb(),
-//   ]);
-
-//   const now = new Date();
-
-//   const ticketmasterEvents = ticketmasterRaw
-//     .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-//     .map((e) => eventDto(e));
-
-//   const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
-
-//   const dbEvents = dbEventsRaw
-//     .filter((e) => new Date(e.dateTime) > now)
-//     .map((e) => dbEventDto(e));
-
-//   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
-
-//   // Remove duplicates using composite key + optional string similarity
-//   const seenKeys = new Set();
-//   const dedupedEvents = [];
-
-//   for (let event of allEvents) {
-//     const dateKey = event.dateTime
-//       ? new Date(event.dateTime).toDateString()
-//       : "unknown";
-//     const locationKey = (event.location || "").toLowerCase().trim();
-//     const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
-
-//     const isDuplicate = seenKeys.has(uniqueKey);
-
-//     // If not duplicate by ID+date+venue
-//     if (!isDuplicate) {
-//       // Optional fuzzy match for similar titles
-//       if (USE_STRING_MATCHING) {
-//         const isSimilar = dedupedEvents.some((existing) => {
-//           const sameDate =
-//             (existing.dateTime &&
-//               event.dateTime &&
-//               new Date(existing.dateTime).toDateString() ===
-//                 new Date(event.dateTime).toDateString()) ||
-//             false;
-
-//           const sameVenue =
-//             (existing.location || "").toLowerCase() === locationKey;
-
-//           const titleSimilarity = stringSimilarity.compareTwoStrings(
-//             existing.name || "",
-//             event.name || ""
-//           );
-
-//           return sameDate && sameVenue && titleSimilarity > 0.8;
-//         });
-
-//         if (!isSimilar) {
-//           seenKeys.add(uniqueKey);
-//           dedupedEvents.push(event);
-//         }
-//       } else {
-//         seenKeys.add(uniqueKey);
-//         dedupedEvents.push(event);
-//       }
-//     }
-//   }
-
-//   // Add distance info
-//   const enrichedEvents = dedupedEvents.map((event) => {
-//     const distance =
-//       event.latitude && event.longitude
-//         ? getDistanceFromLatLonInKm(
-//             parseFloat(latitude),
-//             parseFloat(longitude),
-//             event.latitude,
-//             event.longitude
-//           )
-//         : Number.MAX_SAFE_INTEGER;
-
-//     return { ...event, distance };
-//   });
-
-//   // Add interaction data
-//   const finalResults = await Promise.all(
-//     enrichedEvents.map(async (event) => {
-//       try {
-//         const interaction = await eventService.getInteractionDetails({
-//           externalId: event.id,
-//           userId: userData.id,
-//         });
-
-//         return {
-//           ...event,
-//           interaction: interaction || { isLiked: false, isGoing: false },
-//         };
-//       } catch (err) {
-//         return {
-//           ...event,
-//           interaction: { isLiked: false, isGoing: false },
-//         };
-//       }
-//     })
-//   );
-
-//   // Sort by date first, then distance
-//   finalResults.sort((a, b) => {
-//     const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
-//     const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
-//     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
-//     return a.distance - b.distance;
-//   });
-
-//   res.status(200).json({
-//     status: "success",
-//     message: "Events and places fetched successfully.",
-//     data: {
-//       results: finalResults,
-//     },
-//   });
-// });
+// with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
 
 exports.getEvents = catchAsync(async (req, res, next) => {
@@ -645,11 +264,15 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     eventCategory,
     latitude,
     longitude,
-    radius = 200,
+    radius = 75,
   } = req.query;
 
   const userId = req.user.id;
   const userData = await authService.findUserById(userId);
+
+
+    const milesToMeters = (miles) => miles * 1609.34;
+  console.log(milesToMeters, 'meters')
 
   if (!latitude || !longitude) {
     latitude = userData?.lat;
@@ -682,7 +305,8 @@ exports.getEvents = catchAsync(async (req, res, next) => {
           city,
           latitude,
           longitude,
-          radius,
+          // radius,
+          radius: milesToMeters(radius)
         })
       : Promise.resolve([]),
 
@@ -802,7 +426,343 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   });
 });
 
+// with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
+
+// new api as on 22 april 2 PM
+// exports.getEvents = catchAsync(async (req, res, next) => {
+//   let {
+//     query,
+//     placeCategory = "",
+//     city = "",
+//     eventCategory = "",
+//     latitude,
+//     longitude,
+//     radius = 75,
+//     expandRadius = "false",
+//   } = req.query;
+
+//   const userId = req.user.id;
+//   const userData = await authService.findUserById(userId);
+
+//   if (!latitude || !longitude) {
+//     latitude = userData?.lat;
+//     longitude = userData?.long;
+//   }
+
+//   const expandedRadius = expandRadius === "true" ? 150 : radius;
+
+//   const shouldCallTicketmaster = eventCategory.trim() !== "";
+//   const shouldCallGooglePlaces = placeCategory.trim() !== "";
+//   const callBothUnfiltered = !shouldCallTicketmaster && !shouldCallGooglePlaces;
+
+//   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
+//     (shouldCallTicketmaster || callBothUnfiltered)
+//       ? eventService.fetchTicketmasterEvents({
+//           query,
+//           city,
+//           eventCategory: shouldCallTicketmaster ? eventCategory : undefined,
+//           latitude,
+//           longitude,
+//           radius: expandedRadius,
+//         }) : [],
+//     (shouldCallGooglePlaces || callBothUnfiltered)
+//       ? eventService.fetchGooglePlaces({
+//           query,
+//           placeCategory: shouldCallGooglePlaces ? placeCategory : undefined,
+//           city,
+//           latitude,
+//           longitude,
+//           radius: expandedRadius,
+//         }) : [],
+//     eventService.getEventsFromDb(),
+//   ]);
+
+//   const now = new Date();
+
+//   const ticketmasterEvents = ticketmasterRaw
+//     .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+//     .map((e) => eventDto(e));
+
+//   const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+//   const dbEvents = dbEventsRaw
+//     .filter((e) => new Date(e.dateTime) > now)
+//     .map((e) => dbEventDto(e));
+
+//   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
+
+//   const seenKeys = new Set();
+//   const dedupedEvents = [];
+
+//   for (let event of allEvents) {
+//     const dateKey = event.dateTime ? new Date(event.dateTime).toDateString() : "unknown";
+//     const locationKey = (event.location || "").toLowerCase().trim();
+//     const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
+
+//     if (!seenKeys.has(uniqueKey)) {
+//       seenKeys.add(uniqueKey);
+//       dedupedEvents.push(event);
+//     }
+//   }
+
+//   // User preferences
+//   const userPrefsObj = userData?.preferences || {};
+//   const flatPrefsString = JSON.stringify(userPrefsObj).toLowerCase();
+
+//   const enrichedEvents = await Promise.all(dedupedEvents.map(async (event) => {
+//     const distance =
+//       event.latitude && event.longitude
+//         ? getDistanceFromLatLonInKm(
+//             parseFloat(latitude),
+//             parseFloat(longitude),
+//             event.latitude,
+//             event.longitude
+//           )
+//         : Number.MAX_SAFE_INTEGER;
+
+//     const isWithinRadius = distance <= radius || event.source === "UNI Featured";
+
+//     if (!isWithinRadius && expandRadius !== "true") {
+//       return null;
+//     }
+
+//     // Total RSVP / Like / Share count
+//     const interactionStats = await prisma.eventAttendance.aggregate({
+//       _count: {
+//         isGoing: true,
+//         isLiked: true,
+//         isShared: true,
+//       },
+//       where: { externalId: event.id },
+//     });
+
+//     // Current user interaction
+//     const interaction = await prisma.eventAttendance.findUnique({
+//       where: {
+//         eventId_userId: {
+//           eventId: event.id,
+//           userId,
+//         },
+//       },
+//     });
+
+//     // Relevance Score using user preference tags
+//     const eventTags = event.preferences || [];
+//     const matchCount = eventTags.filter((tag) =>
+//       flatPrefsString.includes(String(tag).toLowerCase())
+//     ).length;
+
+//     return {
+//       ...event,
+//       distance,
+//       interaction: {
+//         isLiked: interaction?.isLiked || false,
+//         isGoing: interaction?.isGoing || false,
+//         isShared: interaction?.isShared || false,
+//       },
+//       rsvps: interactionStats._count.isGoing,
+//       likes: interactionStats._count.isLiked,
+//       shares: interactionStats._count.isShared,
+//       relevanceScore: matchCount,
+//     };
+//   }));
+
+//   const cleanEvents = enrichedEvents.filter(Boolean);
+
+//   const scoredEvents = cleanEvents.map((event) => {
+//     const proximityFactor = 1 / (event.distance + 1);
+//     const engagementFactor = (event.rsvps || 0) + (event.likes || 0) + (event.shares || 0);
+//     const relevanceFactor = event.relevanceScore || 0;
+
+//     const score = (3 * proximityFactor) + (2 * engagementFactor) + (1 * relevanceFactor);
+
+//     return { ...event, score };
+//   });
+
+//   scoredEvents.sort((a, b) => b.score - a.score);
+
+//   res.status(200).json({
+//     status: "success",
+//     message: "Events and places fetched successfully.",
+//     data: {
+//       results: scoredEvents,
+//     },
+//   });
+// });
+
+
+// new api as on 22 april 4.30 api is in good condition and in this api the feature of algorithm is also done so it will be live on monday means 28 april 2025. 
+
+// exports.getEvents = catchAsync(async (req, res, next) => {
+//   let {
+//     query,
+//     placeCategory = "",
+//     city = "",
+//     eventCategory = "",
+//     latitude,
+//     longitude,
+//     radius = 75,
+//     expandRadius = "false",
+//   } = req.query;
+
+//   const userId = req.user.id;
+//   const userData = await authService.findUserById(userId);
+//   const milesToMeters = (miles) => miles * 1609.34;
+//   console.log(milesToMeters, 'meters')
+
+//   if (!latitude || !longitude) {
+//     latitude = userData?.lat;
+//     longitude = userData?.long;
+//   }
+
+//   const expandedRadius = expandRadius === "true" ? 150 : radius;
+
+//   const shouldCallTicketmaster = eventCategory.trim() !== "";
+//   const shouldCallGooglePlaces = placeCategory.trim() !== "";
+//   const callBothUnfiltered = !shouldCallTicketmaster && !shouldCallGooglePlaces;
+
+//   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
+//     (shouldCallTicketmaster || callBothUnfiltered)
+//       ? eventService.fetchTicketmasterEvents({
+//           query,
+//           city,
+//           eventCategory: shouldCallTicketmaster ? eventCategory : undefined,
+//           latitude,
+//           longitude,
+//           radius: expandedRadius,
+//         }) : [],
+//     (shouldCallGooglePlaces || callBothUnfiltered)
+//       ? eventService.fetchGooglePlaces({
+//           query,
+//           placeCategory: shouldCallGooglePlaces ? placeCategory : undefined,
+//           city,
+//           latitude,
+//           longitude,
+//           // radius: expandedRadius,
+//           radius: milesToMeters(expandedRadius)
+
+//         }) : [],
+//     eventService.getEventsFromDb(),
+//   ]);
+
+//   const now = new Date();
+
+//   const ticketmasterEvents = ticketmasterRaw
+//     .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+//     .map((e) => eventDto(e));
+
+//   const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+//   const dbEvents = dbEventsRaw
+//     .filter((e) => new Date(e.dateTime) > now)
+//     .map((e) => dbEventDto(e));
+
+//   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
+
+//   const seenKeys = new Set();
+//   const dedupedEvents = [];
+
+//   for (let event of allEvents) {
+//     const dateKey = event.dateTime ? new Date(event.dateTime).toDateString() : "unknown";
+//     const locationKey = (event.location || "").toLowerCase().trim();
+//     const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
+
+//     if (!seenKeys.has(uniqueKey)) {
+//       seenKeys.add(uniqueKey);
+//       dedupedEvents.push(event);
+//     }
+//   }
+
+//   // User preferences
+//   const userPrefsObj = userData?.preferences || {};
+//   const flatPrefsString = JSON.stringify(userPrefsObj).toLowerCase();
+
+//   const enrichedEvents = await Promise.all(dedupedEvents.map(async (event) => {
+//     const distance =
+//       event.latitude && event.longitude
+//         ? getDistanceFromLatLonInMiles(
+//             parseFloat(latitude),
+//             parseFloat(longitude),
+//             event.latitude,
+//             event.longitude
+//           )
+//         : Number.MAX_SAFE_INTEGER;
+
+//     const isWithinRadius = distance <= radius || event.source === "UNI Featured";
+
+//     if (!isWithinRadius && expandRadius !== "true") {
+//       return null;
+//     }
+
+//     // Total RSVP / Like / Share count
+//     const interactionStats = await prisma.eventAttendance.aggregate({
+//       _count: {
+//         isGoing: true,
+//         isLiked: true,
+//         isShare: true,
+//       },
+//       where: { externalId: event.id },
+//     });
+
+//     // Current user interaction
+//     const interaction = await prisma.eventAttendance.findUnique({
+//       where: {
+//         eventId_userId: {
+//           eventId: event.id,
+//           userId,
+//         },
+//       },
+//     });
+
+//     // Relevance Score using user preference tags
+//     const eventTags = event.preferences || [];
+//     const matchCount = eventTags.filter((tag) =>
+//       flatPrefsString.includes(String(tag).toLowerCase())
+//     ).length;
+
+//     return {
+//       ...event,
+//       distance,
+//       interaction: {
+//         isLiked: interaction?.isLiked || false,
+//         isGoing: interaction?.isGoing || false,
+//         isShared: interaction?.isShare || false,
+//       },
+//       rsvps: interactionStats._count.isGoing,
+//       likes: interactionStats._count.isLiked,
+//       shares: interactionStats._count.isShare,
+//       relevanceScore: matchCount,
+//     };
+//   }));
+
+//   const cleanEvents = enrichedEvents.filter(Boolean);
+
+//   const scoredEvents = cleanEvents.map((event) => {
+//     const proximityFactor = 1 / (event.distance + 1);
+//     const engagementFactor = (event.rsvps || 0) + (event.likes || 0) + (event.shares || 0);
+//     const relevanceFactor = event.relevanceScore || 0;
+
+//     const score = (3 * proximityFactor) + (2 * engagementFactor) + (1 * relevanceFactor);
+
+//     return { ...event, score };
+//   });
+
+//   scoredEvents.sort((a, b) => b.score - a.score);
+
+//   res.status(200).json({
+//     status: "success",
+//     message: "Events and places fetched successfully.",
+//     data: {
+//       results: scoredEvents,
+//     },
+//   });
+// });
+
+
+
+
+// new api as on 22 april 4.30 api is in good condition and in this api the feature of algorithm is also done so it will be live on monday means 28 april 2025. 
 
 // ------------------------new working code from 21 april 2025-----------------------------//
 
@@ -827,6 +787,28 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
 
   return distance; // in km
 }
+
+
+function getDistanceFromLatLonInMiles(lat1, lon1, lat2, lon2) {
+  const deg2rad = (deg) => deg * (Math.PI / 180);
+  const R = 3958.8; // Radius of the earth in miles
+
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  return distance; // in miles
+}
+
 
 
 
@@ -968,7 +950,7 @@ exports.getUserEventOverview = catchAsync(async (req, res, next) => {
 });
 
 exports.handleEventInteraction = catchAsync(async (req, res, next) => {
-  const { isLiked, isGoing, eventData } = req.body;
+  const { isLiked, isGoing,isShare, eventData } = req.body;
   const { eventId } = req.params;
   const userId = req.user.id;
 
@@ -990,12 +972,17 @@ exports.handleEventInteraction = catchAsync(async (req, res, next) => {
     return next(new AppError("isGoing must be a boolean value", 401));
   }
 
+  if (isShare !== undefined && typeof isShare !== "boolean") {
+    return next(new AppError("isGoing must be a boolean value", 401));
+  }
+
   // Handle the interaction through the service
   const attendanceRecord = await eventService.handleInteraction({
     userId,
     eventId,
     isLiked,
     isGoing,
+    isShare,
     eventData,
   });
 
@@ -1010,9 +997,11 @@ exports.handleEventInteraction = catchAsync(async (req, res, next) => {
 exports.createEvent = catchAsync(async (req, res, next) => {
   const eventData = {
     ...req.body,
-    source: "uni",
+    source: "UNI Featured",
     ageMin: req.body.ageMin ? parseInt(req.body.ageMin, 10) : null,
     ageMax: req.body.ageMax ? parseInt(req.body.ageMax, 10) : null,
+    latitude: req.body.latitude ? parseFloat(req.body.latitude) : null,
+    longitude: req.body.longitude ? parseFloat(req.body.longitude) : null,
   };
 
   let imageUrl = null;
@@ -1040,6 +1029,7 @@ exports.createEvent = catchAsync(async (req, res, next) => {
     eventData.image = imageUrl;
   }
 
+  console.log(req.body, 'body')
   // Create event in the database
   const newEvent = await eventService.createEvent({
     userId: req.user.id,
