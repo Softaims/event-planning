@@ -50,14 +50,14 @@ const createEventPreferencesValidations = (isRequired = true) => {
             }
           });
 
-          if (missingKeys.length > 0) {
-            console.error(
-              `🚨 Missing preference fields: ${missingKeys.join(", ")}`
-            );
-            throw new Error(
-              `Missing preference fields: ${missingKeys.join(", ")}`
-            );
-          }
+          // if (missingKeys.length > 0) {
+          //   console.error(
+          //     `🚨 Missing preference fields: ${missingKeys.join(", ")}`
+          //   );
+          //   throw new Error(
+          //     `Missing preference fields: ${missingKeys.join(", ")}`
+          //   );
+          // }
 
           return true;
         })
