@@ -8,6 +8,24 @@ const {notifyPopularEvent} = require("./eventNotifications");
 const {popularByPreferences} = require("./eventNotifications");
 const extractFilters=require("./../utils/chatGPT")
 
+
+const keywordExtractor = require("keyword-extractor");
+
+const extractMainKeywords = (query) => {
+  if (!query || typeof query !== "string") return "";
+
+  const extractionResult = keywordExtractor.extract(query, {
+    language: "english",
+    remove_digits: true,
+    return_changed_case: true,
+    remove_duplicates: true,
+  });
+
+  return extractionResult.join(" ");
+};
+
+
+
 const {
   calculateMatchPercentage,
 } = require("../utils/calculateMatchPercentage ");
@@ -287,6 +305,8 @@ exports.fetchTicketmasterEvents = async ({
   radius = 200,
 }) => {
   try {
+    const filteredQuery = filterQuery(query); // <-- change here
+
     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
 
     const categoryData = eventCategory ? categoryConfig[eventCategory] : null;
@@ -297,7 +317,8 @@ exports.fetchTicketmasterEvents = async ({
       size: 200,
       radius,
       ...(latlong && { latlong }),
-      ...(query && { keyword: query }),
+      // ...(query && { keyword: query }),
+      ...(filteredQuery && { keyword: filteredQuery }), // <-- use filteredQuery
       ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
       ...(categoryData?.genreId && { genreId: categoryData.genreId }),
     };

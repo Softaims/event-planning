@@ -289,7 +289,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
     shouldCallTicketmaster
       ? eventService.fetchTicketmasterEvents({
-          query: eventCategory ? query : "",
+          query: query ? query : "",
           city,
           eventCategory,
           latitude,
@@ -300,7 +300,7 @@ exports.getEvents = catchAsync(async (req, res, next) => {
 
     shouldCallGooglePlaces
       ? eventService.fetchGooglePlaces({
-          query: placeCategory ? query : "",
+          query:  query ? query : "",
           placeCategory,
           city,
           latitude,

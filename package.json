@@ -33,6 +33,7 @@
     "helmet": "^7.2.0",
     "html-to-text": "^9.0.5",
     "jsonwebtoken": "^9.0.2",
+    "keyword-extractor": "^0.0.28",
     "libphonenumber-js": "^1.11.20",
     "mailchecker": "^6.0.16",
     "moment": "^2.30.1",
