@@ -296,7 +296,7 @@ router.patch(
  */
 router.delete(
   "/:eventId",
-  authMiddleware.protect,
+  // authMiddleware.protect,
   eventsController.deleteEvent
 );
 
