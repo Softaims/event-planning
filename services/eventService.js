@@ -347,6 +347,78 @@ exports.fetchTicketmasterEvents = async ({
 
 // ------------- my new function from 21 april 
 
+// exports.fetchGooglePlaces = async ({
+//   query,
+//   latitude,
+//   longitude,
+//   placeCategory,
+//   city,
+//   radius,
+//   size = 200,
+// }) => {
+//   try {
+//     console.log(radius, 'radiu')
+//     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+//     if (!apiKey) {
+//       throw new AppError("Google Places API key is missing", 500);
+//     }
+
+//     if (!latitude || !longitude) {
+//       throw new AppError("Latitude and Longitude are required", 401);
+//     }
+
+//     let url;
+
+//     // if (query) {
+//     //   url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
+//     //     query
+//     //   )}&location=${latitude},${longitude}&radius=${radius}`;
+//     //   console.log(url,'rul')
+//     //   if (city) url += ` in ${encodeURIComponent(city)}`;
+//     // } else {
+//     //   url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
+//     //   console.log(url,'rul')
+
+//     // }
+
+//     // if (placeCategory) {
+//     //   url += `&type=${encodeURIComponent(placeCategory)}`;
+//     // }
+
+//     if (query) {
+//       let fullQuery = query;
+//       if (placeCategory) fullQuery += ` ${placeCategory}`;
+//       if (city) fullQuery += ` in ${city}`;
+    
+//       url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
+//         fullQuery
+//       )}&location=${latitude},${longitude}&radius=${radius}`;
+//     } else {
+//       url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
+//       if (placeCategory) {
+//         url += `&type=${encodeURIComponent(placeCategory)}`;
+//       }
+//     }
+    
+//     console.log(url, 'finalurl')
+
+//     const response = await axios.get(url);
+
+//     if (response.data.status !== "OK") {
+//       logger.error("Google Places API error response:", response.data);
+//       return [];
+//     }
+
+//     return response.data.results.slice(0, size);
+//   } catch (error) {
+//     logger.error("Error fetching Google Places data:", error);
+//     throw new AppError("Failed to fetch places from Google Places API", 500);
+//   }
+// };
+
+
+// ------------- my new function from 02 May 2025.
+
 exports.fetchGooglePlaces = async ({
   query,
   latitude,
@@ -357,7 +429,6 @@ exports.fetchGooglePlaces = async ({
   size = 200,
 }) => {
   try {
-    console.log(radius, 'radiu')
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
       throw new AppError("Google Places API key is missing", 500);
@@ -369,22 +440,20 @@ exports.fetchGooglePlaces = async ({
 
     let url;
 
-    if (query) {
+    // Use Text Search if query or placeCategory is provided (more accurate for keywords)
+    if (query || placeCategory) {
+      const searchQuery = query
+        ? `${query}${city ? ` in ${city}` : ""}`
+        : `${placeCategory}${city ? ` in ${city}` : ""}`;
+
       url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
-        query
+        searchQuery
       )}&location=${latitude},${longitude}&radius=${radius}`;
-      console.log(url,'rul')
-      if (city) url += ` in ${encodeURIComponent(city)}`;
     } else {
+      // Fallback to Nearby Search if no query or category
       url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
-      console.log(url,'rul')
-
     }
-
-    if (placeCategory) {
-      url += `&type=${encodeURIComponent(placeCategory)}`;
-    }
-
+console.log(url, 'finalurl')
     const response = await axios.get(url);
 
     if (response.data.status !== "OK") {
