@@ -400,16 +400,51 @@ exports.fetchGooglePlaces = async ({
 };
 
 
-exports.getEventsFromDb = async () => {
+// exports.getEventsFromDb = async () => {
+//   return await prisma.event.findMany({
+//     where: {
+//       source: "UNI Featured",
+//     },
+//     orderBy: {
+//       createdAt: "desc",
+//     },
+//   });
+// };
+
+exports.getEventsFromDb = async ({ query = "", latitude, longitude }) => {
+  const filters = {
+    source: "UNI Featured",
+  };
+
+  if (query) {
+    filters.OR = [
+      {
+        name: {
+          contains: query,
+          mode: "insensitive",
+        },
+      },
+      {
+        description: {
+          contains: query,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // If you store event.latitude and event.longitude, and want to filter within a certain radius:
+  // You can add a proximity check here using raw SQL or PostGIS (but Prisma by itself doesn't support geospatial filtering directly).
+  // For now, we'll just return all, and filter manually later if needed.
+
   return await prisma.event.findMany({
-    where: {
-      source: "UNI Featured",
-    },
+    where: filters,
     orderBy: {
       createdAt: "desc",
     },
   });
 };
+
 
 exports.isUserGoing = async (eventId, userId) => {
   const attendance = await prisma.eventAttendance.findFirst({

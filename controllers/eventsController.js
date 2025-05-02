@@ -310,7 +310,13 @@ exports.getEvents = catchAsync(async (req, res, next) => {
         })
       : Promise.resolve([]),
 
-    eventService.getEventsFromDb(),
+    // eventService.getEventsFromDb(),
+    eventService.getEventsFromDb({
+      query: query ? query.trim() : "",
+      latitude,
+      longitude,
+    })
+    
   ]);
 
   const now = new Date();
