@@ -1212,3 +1212,47 @@ exports.deleteEvent = catchAsync(async (req, res, next) => {
     message: "Event deleted successfully.",
   });
 });
+
+
+// GET /api/events
+exports.getAllEvents = async (req, res) => {
+  try {
+    const events = await prisma.event.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: events,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch events',
+      error: error.message,
+    });
+  }
+};
+
+// DELETE /api/events
+exports.deleteAllEvents = async (req, res) => {
+  try {
+   const a =  await prisma.event.deleteMany({ where: {
+      latitude: null,
+      longitude: null,
+    }});
+console.log(a , 'aaaa')
+    res.status(200).json({
+      status: 'success',
+      message: 'All events deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete events',
+      error: error.message,
+    });
+  }
+};

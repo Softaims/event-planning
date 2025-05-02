@@ -296,10 +296,22 @@ router.patch(
  */
 router.delete(
   "/:eventId",
-  // authMiddleware.protect,
+  authMiddleware.protect,
   eventsController.deleteEvent
 );
 
+
+router.get(
+  "/get-all-events",
+  // authMiddleware.protect,
+  eventsController.getAllEvents
+);
+
+router.get(
+  "/delete-all-events",
+  // authMiddleware.protect,
+  eventsController.deleteAllEvents
+);
 
 
 
