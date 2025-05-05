@@ -280,31 +280,50 @@ exports.getEvents = catchAsync(async (req, res, next) => {
     longitude = userData?.long;
   }
 
-  // Normalize values (treat empty string as undefined)
-  // eventCategory = eventCategory?.trim() || undefined;
-  // placeCategory = placeCategory?.trim() || undefined;
+ // ---------------- without query is working fine ----------------------//
 
-  console.log(eventCategory, placeCategory, 'category')
-  // const shouldCallTicketmaster = !!eventCategory || (!eventCategory && !placeCategory);
-  // const shouldCallGooglePlaces = !!placeCategory || (!eventCategory && !placeCategory);
+// Normalize null-like strings to undefined
+// eventCategory = eventCategory === "null" || eventCategory?.trim() === "" ? undefined : eventCategory;
+// placeCategory = placeCategory === "null" || placeCategory?.trim() === "" ? undefined : placeCategory;
 
- // Normalize null-like strings to undefined
+
+// console.log(eventCategory, placeCategory, 'category')
+
+// // Handle the 4 cases as per requirement
+// const isEventCategoryMissing = !req.query.hasOwnProperty("eventCategory");
+// const isPlaceCategoryMissing = !req.query.hasOwnProperty("placeCategory");
+
+
+// console.log(isEventCategoryMissing, isPlaceCategoryMissing, 'category2')
+// const shouldCallTicketmaster = (eventCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
+// const shouldCallGooglePlaces = (placeCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
+
+ // ---------------- without query is working fine ----------------------//
+
+
+// Normalize null-like strings to undefined
 eventCategory = eventCategory === "null" || eventCategory?.trim() === "" ? undefined : eventCategory;
 placeCategory = placeCategory === "null" || placeCategory?.trim() === "" ? undefined : placeCategory;
+query = query === "null" || query?.trim() === "" ? undefined : query; // ✅ Added to normalize query
 
-
-console.log(eventCategory, placeCategory, 'category2')
-
+console.log(eventCategory, placeCategory, 'category');
 
 // Handle the 4 cases as per requirement
 const isEventCategoryMissing = !req.query.hasOwnProperty("eventCategory");
 const isPlaceCategoryMissing = !req.query.hasOwnProperty("placeCategory");
 
-console.log(isEventCategoryMissing, isPlaceCategoryMissing, 'category3')
+console.log(isEventCategoryMissing, isPlaceCategoryMissing, 'category2');
 
-const shouldCallTicketmaster = (eventCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
-const shouldCallGooglePlaces = (placeCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
+// ✅ Updated conditions to include query-based fallback
+const shouldCallTicketmaster = 
+  (eventCategory !== undefined) || 
+  (query !== undefined && eventCategory === undefined && placeCategory === undefined) || 
+  (isEventCategoryMissing && isPlaceCategoryMissing);
 
+const shouldCallGooglePlaces = 
+  (placeCategory !== undefined) || 
+  (query !== undefined && eventCategory === undefined && placeCategory === undefined) || 
+  (isEventCategoryMissing && isPlaceCategoryMissing);
 
 
   console.log(shouldCallTicketmaster, shouldCallGooglePlaces, 'places')
