@@ -84,6 +84,18 @@ const calculateInterestMatch = (currentUserPrefs, attendeePrefs) => {
   return Math.round(Math.min(averageMatch, 100));
 };
 
+
+const filterQuery1 = (query) => {
+  if (!query || typeof query !== "string") return "";
+
+  const words = stopword
+    .removeStopwords(query.split(" ").map((word) => word.trim()));
+
+  // Only pick first 2 keywords maximum
+  return words.slice(0, 2).join(" ");
+};
+
+
 const filterQuery = (query) => {
   if (!query || typeof query !== "string") return "";
 
@@ -91,6 +103,64 @@ const filterQuery = (query) => {
   return stopword
     .removeStopwords(query.split(" ").map((word) => word.trim()))
     .join(" ");
+};
+
+const importantKeywords = ["concert", "music", "comedy", "sports", "festival", "theatre"];
+
+const filterQuery2 = (query) => {
+  if (!query || typeof query !== "string") return "";
+
+  const words = stopword
+    .removeStopwords(query.split(" ").map((word) => word.trim()));
+
+  // Find important word
+  const keyword = words.find(word => importantKeywords.includes(word.toLowerCase()));
+
+  return keyword || words.slice(0, 2).join(" ");
+};
+
+
+const importantKeywords1 = [
+  // Broad categories
+  "music", "sports", "arts", "theater", "film", "miscellaneous",
+
+  // Genres
+  "rock", "pop", "hip-hop", "rap", "classical", "jazz", "comedy", "family", "festivals", "exhibitions",
+
+  // Subgenres
+  "alternative rock", "indie pop", "stand-up", "children", "opera", "ballet", "magic", "circus",
+
+  // Types
+  "vip", "meet", "greet", "early", "entry", "parking",
+
+  // Nightlife & Clubbing
+  "club", "nightclub", "nightlife", "dj", "dance", "rave", "party", "electronic", "edm", "techno", "house", "trance", "afterparty", "bar", "lounge", "drinks", "live set", "bass", "dubstep", "music festival"
+];
+
+
+const normalize = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "") // remove punctuation
+    .trim();
+};
+
+const filterQuery3 = (query) => {
+  if (!query || typeof query !== "string") return "";
+
+  const normalizedQuery = normalize(query);
+
+  const words = stopword
+    .removeStopwords(normalizedQuery.split(" ").map((word) => word.trim()));
+
+  // First check for multi-word (subgenre/type) matches
+  const joined = words.join(" ");
+  for (const keyword of importantKeywords1.sort((a, b) => b.length - a.length)) {
+    if (joined.includes(keyword)) return keyword;
+  }
+
+  // Fallback to first 2 keywords
+  return words.slice(0, 2).join(" ");
 };
 
 const formatMultipleParams = (param) => {
@@ -238,16 +308,16 @@ const formatMultipleParams = (param) => {
 
 
 const categoryConfig = {
-  Festival: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAeE" },
-  Food: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAI" },
+  "Festival": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAeE" },
+  "Food": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAI" },
   "Health & Wellness": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAl" },
-  Seminar: { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAJe" },
+  "Seminar": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAJe" },
   "Club": { classificationId: "KZFzniwnSyZfZ7v7n1", genreId: "KnvZfZ7vAAa" },
   "Music/Concert": { classificationId: "KZFzniwnSyZfZ7v7nJ" },
-  Sport: { classificationId: "KZFzniwnSyZfZ7v7nE" },
+  "Sport": { classificationId: "KZFzniwnSyZfZ7v7nE" },
   "Arts & Theatre": { classificationId: "KZFzniwnSyZfZ7v7na" },
-  Film: { classificationId: "KZFzniwnSyZfZ7v7nn" },
-  Other: { classificationId: "KZFzniwnSyZfZ7v7n1" },
+  "Film": { classificationId: "KZFzniwnSyZfZ7v7nn" },
+  "Other": { classificationId: "KZFzniwnSyZfZ7v7n1" },
 };
 
 // exports.fetchTicketmasterEvents = async ({
@@ -296,6 +366,8 @@ const categoryConfig = {
 //   }
 // };
 
+
+// comented on 05 may and it is live
 exports.fetchTicketmasterEvents = async ({
   query,
   city,
@@ -305,7 +377,7 @@ exports.fetchTicketmasterEvents = async ({
   radius = 200,
 }) => {
   try {
-    const filteredQuery = filterQuery(query); // <-- change here
+    const filteredQuery = filterQuery3(query); // <-- change here
 
     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
 
@@ -316,9 +388,10 @@ exports.fetchTicketmasterEvents = async ({
       locale: "*",
       size: 200,
       radius,
+      // city,
       ...(latlong && { latlong }),
-      // ...(query && { keyword: query }),
-      ...(filteredQuery && { keyword: filteredQuery }), // <-- use filteredQuery
+      ...(query && { keyword: query }),
+      // ...(filteredQuery && { keyword: filteredQuery }), // <-- use filteredQuery
       ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
       ...(categoryData?.genreId && { genreId: categoryData.genreId }),
     };
@@ -341,6 +414,111 @@ exports.fetchTicketmasterEvents = async ({
   } catch (error) {
     logger.error("❌ Error fetching Ticketmaster events:", error);
     throw new AppError("Failed to fetch events from Ticketmaster", 500);
+  }
+};
+
+
+
+// exports.fetchTicketmasterEventsForAISearch = async ({
+//   keyword,
+//   city,
+//   latitude,
+//   longitude,
+//   segmentName,
+//   radius = 75, // Default for AI Search
+// }) => {
+//   try {
+//     const filteredQuery = filterQuery3(keyword);
+//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+//     // Lookup category config by segment name (e.g. "Music", "Comedy", "Sports")
+//     const categoryData = segmentName && categoryConfig[segmentName] ? categoryConfig[segmentName] : null;
+
+//     // const segmentName = segment;
+//     // console.log(segmentName, 'name')
+//     const params = {
+//       apikey: process.env.TICKETMASTER_API_KEY,
+//       locale: "*",
+//       size: 200,
+//       radius,
+//       // ...(keyword && { keyword }),
+//       ...(city && { city }),
+//       ...(segmentName && { segmentName }),
+
+//       ...(latlong && { latlong }),
+//       ...(filteredQuery && { keyword: filteredQuery }),
+//       ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
+//       ...(categoryData?.genreId && { genreId: categoryData.genreId }),
+//     };
+
+//     console.log("🎫 Ticketmaster AI Search Params:", params);
+
+//     const response = await axios.get(TICKET_MASTER_URL, { params });
+//     const events = response.data._embedded?.events || [];
+
+//     const now = new Date();
+//     const filteredEvents = events.filter((event) => {
+//       const date = new Date(event.dates?.start?.dateTime);
+//       const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
+//       return date > now && (!city || venueCity.includes(city.toLowerCase()));
+//     });
+
+//     console.log(`✅ [AI] Fetched ${filteredEvents.length} Ticketmaster events`);
+//     return filteredEvents;
+//   } catch (error) {
+//     logger.error("❌ [AI] Ticketmaster fetch error:", error);
+//     throw new AppError("AI Ticketmaster fetch failed", 500);
+//   }
+// };
+
+
+exports.fetchTicketmasterEventsForAISearch = async ({
+  keyword,
+  // city,
+  latitude,
+  longitude,
+  segmentName,
+  radius = 75, // Default for AI Search
+}) => {
+  try {
+    const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+    // Lookup category config by segment name (e.g. "Music", "Comedy", "Sports")
+    const categoryData = segmentName && categoryConfig[segmentName] ? categoryConfig[segmentName] : null;
+
+    const params = {
+      apikey: process.env.TICKETMASTER_API_KEY,
+      ...(keyword && { keyword }),  
+      ...(latlong && { latlong }),  
+      radius,       // Directly pass keyword
+      locale: "*",
+      size: 200,
+      ...(segmentName && { segmentName }),
+      // ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
+      // ...(categoryData?.genreId && { genreId: categoryData.genreId }),
+    };
+
+    console.log("🎫 Ticketmaster AI Search Params:", params);
+
+    const response = await axios.get(TICKET_MASTER_URL, { params });
+    const events = response.data._embedded?.events || [];
+
+    const now = new Date();
+    // const filteredEvents = events.filter((event) => {
+    //   const date = new Date(event.dates?.start?.dateTime);
+    //   const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
+    //   return date > now && (!city || venueCity.includes(city.toLowerCase()));
+    // });
+    const filteredEvents = events.filter((event) => {
+      const date = new Date(event.dates?.start?.dateTime);
+      return date > now;
+    });
+    
+    console.log(`✅ [AI] Fetched ${filteredEvents.length} Ticketmaster events`);
+    return filteredEvents;
+  } catch (error) {
+    logger.error("❌ [AI] Ticketmaster fetch error:", error);
+    throw new AppError("AI Ticketmaster fetch failed", 500);
   }
 };
 

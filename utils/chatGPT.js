@@ -109,5 +109,119 @@ async function extractFilters(userQuery) {
      return null;
    }
  }
+
+ // -------------home dashboard ai search filter code -----------------//
+
+
+// async function extractSearchIntent (userQuery) {
+//   const prompt = `
+// You are an AI that extracts structured search intent from a user's query about events.
+
+// Fields to extract:
+// {
+//   "keywords": string,
+//   "city": string,
+//   "segment": "Music" | "Sports" | "Arts & Theater" | "Film" | "Miscellaneous",
+//   "genre": string,
+//   "subGenre": string,
+//   "type": string,
+//   "subType": string,
+//   "lat": number,
+//   "long": number,
+//   "radius": number
+// }
+
+// Instructions:
+// - Extract keywords describing the event (e.g., "rock concert").
+// - Identify city if mentioned.
+// - Match category terms to segment/genre/subGenre if possible.
+// - Leave lat/long null unless location is clearly specified.
+
+// - If information is not provided, omit or set as empty string.
+
+// User query: "${userQuery}"
+
+// Return a JSON object only.
+// `;
+
+//   const response = await axios.post(
+//     "https://api.openai.com/v1/chat/completions",
+//     {
+//       model: "gpt-4",
+//       messages: [{ role: "user", content: prompt }],
+//       temperature: 0,
+//     },
+//     {
+//       headers: {
+//         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+//         "Content-Type": "application/json",
+//       },
+//     }
+//   );
+
+//   const rawContent = response.data.choices[0].message.content.trim();
+
+//   try {
+//     const parsed = JSON.parse(rawContent);
+//     return parsed;
+//   } catch (err) {
+//     console.error("Failed to parse OpenAI response:", rawContent);
+//     return {}; // fallback
+//   }
+// };
+
+async function extractSearchIntent(userQuery) {
+  const prompt = `
+You are an AI that extracts structured search intent from a user's query about events.
+
+Fields to extract:
+{
+  "keywords": string,
+  "city": string,
+  "segment": "Music" | "Sports" | "Arts & Theater" | "Film" | "Miscellaneous",
+  "genre": string,
+  "subGenre": string,
+  "type": string,
+  "subType": string
+}
+
+Instructions:
+- Extract keywords describing the event (e.g., "rock concert").
+- Identify city if mentioned.
+- Match category terms to segment/genre/subGenre if possible.
+- Leave fields empty if not provided.
+
+User query: "${userQuery}"
+
+Return a JSON object only.
+`;
+
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const rawContent = response.data.choices[0].message.content.trim();
+
+  try {
+    const parsed = JSON.parse(rawContent);
+    return parsed;
+  } catch (err) {
+    console.error("Failed to parse OpenAI response:", rawContent);
+    return {};
+  }
+}
+
+
  
-module.exports = extractFilters;
+module.exports = {extractFilters, extractSearchIntent};

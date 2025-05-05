@@ -57,6 +57,9 @@ const { prisma } = require("../db");
  */
 router.get("/", authMiddleware.protect, eventsController.getEvents);
 
+
+router.get("/ai-search", authMiddleware.protect, eventsController.aiSearchEvents);
+
 /**
  * @swagger
  * /events/attendance/{eventId}:

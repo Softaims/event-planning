@@ -1,6 +1,7 @@
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
+const {extractSearchIntent} = require("../utils/chatGPT");
 const { prisma } = require("../db");
 const { eventDto } = require("../dtos/eventDto");
 const { placeDto } = require("../dtos/placeDto");
@@ -843,6 +844,254 @@ function getDistanceFromLatLonInMiles(lat1, lon1, lat2, lon2) {
 
 
 
+//---------------------- AI Search Api ------------------------//
+
+// controllers/eventController.js
+
+// exports.aiSearchEvents = catchAsync(async (req, res, next) => {
+//   const { query } = req.query;
+//   const userId = req.user.id;
+
+//   if (!query || query.trim() === "") {
+//     return next(new AppError("Query parameter is required", 400));
+//   }
+
+//   const userData = await authService.findUserById(userId);
+//   let latitude = userData?.lat;
+//   let longitude = userData?.long;
+
+//   const extractedData = await extractSearchIntent(query);
+
+//   const {
+//     keywords = "",
+//     city = "",
+//     segment = "",
+//     genre = "",
+//     subGenre = "",
+//     type = "",
+//     subType = "",
+//     lat = latitude ? latitude : req.query.latitude,
+//     long = longitude ? longitude : req.query.longitude,
+//     // radius = 75,
+//   } = extractedData;
+
+//   console.log(extractedData, 'data')
+//   latitude = lat ?? latitude;
+//   longitude = long ?? longitude;
+
+//   // const milesToMeters = (miles) => miles * 1609.34;
+
+//   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
+//     eventService.fetchTicketmasterEventsForAISearch({
+//       query: keywords,
+//       city,
+//       latitude,
+//       longitude,
+//       eventCategory: segment || genre || subGenre,
+//       segmentName: segment,
+//       // radius,
+//     }),
+//     eventService.fetchGooglePlaces({
+//       query: keywords,
+//       city,
+//       latitude,
+//       longitude,
+//       placeCategory: segment || genre || subGenre,
+//       // radius: milesToMeters(radius),
+//     }),
+//     eventService.getEventsFromDb({
+//       query: keywords,
+//       latitude,
+//       longitude,
+//     }),
+//   ]);
+
+//   const now = new Date();
+
+//   const ticketmasterEvents = ticketmasterRaw
+//     .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+//     .map((e) => eventDto(e));
+
+//   const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+//   const dbEvents = dbEventsRaw
+//     .filter((e) => new Date(e.dateTime) > now)
+//     .map((e) => dbEventDto(e));
+
+//   const allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
+
+//   const seenKeys = new Set();
+//   const dedupedEvents = [];
+
+//   for (let event of allEvents) {
+//     const dateKey = event.dateTime ? new Date(event.dateTime).toDateString() : "unknown";
+//     const locationKey = (event.location || "").toLowerCase().trim();
+//     const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
+
+//     if (!seenKeys.has(uniqueKey)) {
+//       seenKeys.add(uniqueKey);
+//       dedupedEvents.push(event);
+//     }
+//   }
+
+//   const enrichedEvents = dedupedEvents.map((event) => {
+//     const distance = event.latitude && event.longitude
+//       ? getDistanceFromLatLonInKm(parseFloat(latitude), parseFloat(longitude), event.latitude, event.longitude)
+//       : Number.MAX_SAFE_INTEGER;
+
+//     return { ...event, distance };
+//   });
+
+//   const finalResults = await Promise.all(
+//     enrichedEvents.map(async (event) => {
+//       const interaction = await eventService.getInteractionDetails({
+//         externalId: event.id,
+//         userId,
+//       }).catch(() => null);
+
+//       return {
+//         ...event,
+//         interaction: interaction || { isLiked: false, isGoing: false },
+//       };
+//     })
+//   );
+
+//   finalResults.sort((a, b) => {
+//     const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
+//     const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
+//     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+//     return a.distance - b.distance;
+//   });
+
+//   res.status(200).json({
+//     status: "success",
+//     message: "AI-powered event search successful.",
+//     data: {
+//       results: finalResults,
+//     },
+//   });
+// });
+
+
+exports.aiSearchEvents = catchAsync(async (req, res, next) => {
+  const { query, latitude, longitude, radius = 75 } = req.query;
+  const userId = req.user.id;
+
+  if (!query || query.trim() === "") {
+    return next(new AppError("Query parameter is required", 400));
+  }
+
+  if (!latitude || !longitude) {
+    return next(new AppError("Latitude and Longitude are required", 400));
+  }
+
+  const extractedData = await extractSearchIntent(query);
+  const {
+    keywords = "",
+    city = "",
+    segment = "",
+    genre = "",
+    subGenre = "",
+    type = "",
+    subType = ""
+  } = extractedData;
+
+  console.log(extractedData, 'dataaaaaaaaa')
+  const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
+    eventService.fetchTicketmasterEventsForAISearch({
+      keyword:  keywords,
+      city,
+      latitude,
+      longitude,
+      eventCategory: segment || genre || subGenre,
+      segmentName: segment,
+      radius,
+    }),
+    eventService.fetchGooglePlaces({
+      query: keywords,
+      city,
+      latitude,
+      longitude,
+      placeCategory: segment || genre || subGenre,
+      radius: radius * 1609.34, // Convert miles to meters
+    }),
+    eventService.getEventsFromDb({
+      query: keywords,
+      latitude,
+      longitude,
+    }),
+  ]);
+
+  const now = new Date();
+
+  const ticketmasterEvents = ticketmasterRaw
+    .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+    .map((e) => eventDto(e));
+
+  const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+  const dbEvents = dbEventsRaw
+    .filter((e) => new Date(e.dateTime) > now)
+    .map((e) => dbEventDto(e));
+
+  const allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
+
+  const seenKeys = new Set();
+  const dedupedEvents = [];
+
+  for (let event of allEvents) {
+    const dateKey = event.dateTime ? new Date(event.dateTime).toDateString() : "unknown";
+    const locationKey = (event.location || "").toLowerCase().trim();
+    const uniqueKey = `${event.id}_${dateKey}_${locationKey}`;
+
+    if (!seenKeys.has(uniqueKey)) {
+      seenKeys.add(uniqueKey);
+      dedupedEvents.push(event);
+    }
+  }
+
+  const enrichedEvents = dedupedEvents.map((event) => {
+    const distance = event.latitude && event.longitude
+      ? getDistanceFromLatLonInKm(parseFloat(latitude), parseFloat(longitude), event.latitude, event.longitude)
+      : Number.MAX_SAFE_INTEGER;
+
+    return { ...event, distance };
+  });
+
+  const finalResults = await Promise.all(
+    enrichedEvents.map(async (event) => {
+      const interaction = await eventService.getInteractionDetails({
+        externalId: event.id,
+        userId,
+      }).catch(() => null);
+
+      return {
+        ...event,
+        interaction: interaction || { isLiked: false, isGoing: false },
+      };
+    })
+  );
+
+  finalResults.sort((a, b) => {
+    const dateA = a.dateTime ? new Date(a.dateTime) : new Date(8640000000000000);
+    const dateB = b.dateTime ? new Date(b.dateTime) : new Date(8640000000000000);
+    if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+    return a.distance - b.distance;
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "AI-powered event search successful.",
+    data: {
+      results: finalResults,
+    },
+  });
+});
+
+
+
+
+//---------------------- AI Search Api ------------------------//
 
 
 exports.getEventAttendance = catchAsync(async (req, res, next) => {
