@@ -292,9 +292,15 @@ exports.getEvents = catchAsync(async (req, res, next) => {
 eventCategory = eventCategory === "null" || eventCategory?.trim() === "" ? undefined : eventCategory;
 placeCategory = placeCategory === "null" || placeCategory?.trim() === "" ? undefined : placeCategory;
 
+
+console.log(eventCategory, placeCategory, 'category2')
+
+
 // Handle the 4 cases as per requirement
 const isEventCategoryMissing = !req.query.hasOwnProperty("eventCategory");
 const isPlaceCategoryMissing = !req.query.hasOwnProperty("placeCategory");
+
+console.log(isEventCategoryMissing, isPlaceCategoryMissing, 'category3')
 
 const shouldCallTicketmaster = (eventCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
 const shouldCallGooglePlaces = (placeCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
