@@ -281,11 +281,28 @@ exports.getEvents = catchAsync(async (req, res, next) => {
   }
 
   // Normalize values (treat empty string as undefined)
-  eventCategory = eventCategory?.trim() || undefined;
-  placeCategory = placeCategory?.trim() || undefined;
+  // eventCategory = eventCategory?.trim() || undefined;
+  // placeCategory = placeCategory?.trim() || undefined;
 
-  const shouldCallTicketmaster = !!eventCategory || (!eventCategory && !placeCategory);
-  const shouldCallGooglePlaces = !!placeCategory || (!eventCategory && !placeCategory);
+  console.log(eventCategory, placeCategory, 'category')
+  // const shouldCallTicketmaster = !!eventCategory || (!eventCategory && !placeCategory);
+  // const shouldCallGooglePlaces = !!placeCategory || (!eventCategory && !placeCategory);
+
+ // Normalize null-like strings to undefined
+eventCategory = eventCategory === "null" || eventCategory?.trim() === "" ? undefined : eventCategory;
+placeCategory = placeCategory === "null" || placeCategory?.trim() === "" ? undefined : placeCategory;
+
+// Handle the 4 cases as per requirement
+const isEventCategoryMissing = !req.query.hasOwnProperty("eventCategory");
+const isPlaceCategoryMissing = !req.query.hasOwnProperty("placeCategory");
+
+const shouldCallTicketmaster = (eventCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
+const shouldCallGooglePlaces = (placeCategory !== undefined) || (isEventCategoryMissing && isPlaceCategoryMissing);
+
+
+
+  console.log(shouldCallTicketmaster, shouldCallGooglePlaces, 'places')
+
 
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
     shouldCallTicketmaster
