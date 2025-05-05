@@ -405,10 +405,15 @@ exports.fetchTicketmasterEvents = async ({
     console.log(events, 'respone from ticketmaster')
     const now = new Date();
 
+    // const filteredEvents = events.filter((event) => {
+    //   const date = new Date(event.dates?.start?.dateTime);
+    //   const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
+    //   return date > now && (!city || venueCity.includes(city.toLowerCase()));
+    // });
+
     const filteredEvents = events.filter((event) => {
       const date = new Date(event.dates?.start?.dateTime);
-      const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
-      return date > now && (!city || venueCity.includes(city.toLowerCase()));
+      return date > now;
     });
 
     console.log(`✅ Fetched ${filteredEvents.length} events from Ticketmaster`);
