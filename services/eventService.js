@@ -401,6 +401,7 @@ exports.fetchTicketmasterEvents = async ({
     const response = await axios.get(TICKET_MASTER_URL, { params });
     const events = response.data._embedded?.events || [];
 
+    console.log(events, 'respone from ticketmaster')
     const now = new Date();
 
     const filteredEvents = events.filter((event) => {
