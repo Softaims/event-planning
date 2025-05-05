@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const {notifyPopularEvent} = require("./eventNotifications");
 const {popularByPreferences} = require("./eventNotifications");
 const extractFilters=require("./../utils/chatGPT")
+require('dotenv').config();
 
 
 const keywordExtractor = require("keyword-extractor");
