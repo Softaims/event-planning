@@ -386,20 +386,20 @@ const shouldCallGooglePlaces =
   // ---------------- filtering of ticketmaster data -----------------------//
 
   // commented on 06 may 2025.
-  // const ticketmasterEvents = ticketmasterRaw
-  //   .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-  //   .map((e) => eventDto(e));
-
   const ticketmasterEvents = ticketmasterRaw
-  .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-  .map((e) => {
-    const base = eventDto(e);
-    base.preferences = getSortedPreferences([
-      e.classifications?.map((c) => c.segment?.name || c.genre?.name),
-      [e.name]
-    ]);
-    return base;
-  });
+    .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+    .map((e) => eventDto(e));
+
+  // const ticketmasterEvents = ticketmasterRaw
+  // .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+  // .map((e) => {
+  //   const base = eventDto(e);
+  //   base.preferences = getSortedPreferences([
+  //     e.classifications?.map((c) => c.segment?.name || c.genre?.name),
+  //     [e.name]
+  //   ]);
+  //   return base;
+  // });
 
 
   // ---------------- filtering of ticketmaster data -----------------------//
@@ -410,16 +410,16 @@ const shouldCallGooglePlaces =
 
 
   // commented on 06 may 2025.
-  // const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+  const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
 
 
-  const googlePlaces = googlePlacesRaw.map((p) => {
-    const base = placeDto(p);
-    base.preferences = getSortedPreferences([
-      [p.types], [p.name], [p.business_status]
-    ]);
-    return base;
-  });
+  // const googlePlaces = googlePlacesRaw.map((p) => {
+  //   const base = placeDto(p);
+  //   base.preferences = getSortedPreferences([
+  //     [p.types], [p.name], [p.business_status]
+  //   ]);
+  //   return base;
+  // });
   
   // ---------------- filtering of googlePlace data -----------------------//
 
@@ -428,20 +428,20 @@ const shouldCallGooglePlaces =
 
  
   // commented on 06 may 2025.
-  // const dbEvents = dbEventsRaw
-  //   .filter((e) => new Date(e.dateTime) > now)
-  //   .map((e) => dbEventDto(e));
-
-
   const dbEvents = dbEventsRaw
-  .filter((e) => new Date(e.dateTime) > now)
-  .map((e) => {
-    const base = dbEventDto(e);
-    base.preferences = getSortedPreferences([
-      [e.category, e.subCategory, e.name, e.tags]
-    ]);
-    return base;
-  });
+    .filter((e) => new Date(e.dateTime) > now)
+    .map((e) => dbEventDto(e));
+
+
+  // const dbEvents = dbEventsRaw
+  // .filter((e) => new Date(e.dateTime) > now)
+  // .map((e) => {
+  //   const base = dbEventDto(e);
+  //   base.preferences = getSortedPreferences([
+  //     [e.category, e.subCategory, e.name, e.tags]
+  //   ]);
+  //   return base;
+  // });
 
 
   // ---------------- filtering of custom db event data -----------------------//

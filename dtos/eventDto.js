@@ -30,6 +30,7 @@ const eventDto = (event) => {
   const classification = event.classifications?.[0] || {};
 
   const preferenceTags = [
+    classification.name,
     classification.genre?.name,
     classification.subGenre?.name,
     classification.segment?.name,
