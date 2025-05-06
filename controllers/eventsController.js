@@ -302,9 +302,9 @@ exports.getEvents = catchAsync(async (req, res, next) => {
 
 
 // Normalize null-like strings to undefined
-eventCategory = eventCategory === "null" || eventCategory?.trim() === "" ? undefined : eventCategory;
-placeCategory = placeCategory === "null" || placeCategory?.trim() === "" ? undefined : placeCategory;
-query = query === "null" || query?.trim() === "" ? undefined : query; // ✅ Added to normalize query
+eventCategory = eventCategory === "null" || eventCategory === null || eventCategory?.trim() === "" ? undefined : eventCategory;
+placeCategory = placeCategory === "null" || placeCategory === null || placeCategory?.trim() === "" ? undefined : placeCategory;
+query = query === "null" || query === null ||query?.trim() === "" ? undefined : query; // ✅ Added to normalize query
 
 console.log(eventCategory, placeCategory, 'category');
 
