@@ -256,22 +256,61 @@ const USE_STRING_MATCHING = true; // Enable fuzzy match for title variation
 
 // with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
-
 function getSortedPreferences(preferenceSources = []) {
+  const categoryPriority = {
+    concerts: 1,
+    restaurant: 2,
+    transport: 3,
+    amusement_park: 4,
+    art_gallery: 5,
+    sports: 6,
+    car: 7,
+    healthcare: 8,
+    library: 9,
+    real_estate: 10,
+    other: 11
+  };
+
+  const categoryMap = {
+    concerts: ['theatre', 'musical', 'arts & theatre', 'concerts'],
+    restaurant: ['restaurant', 'cafe', 'bakery', 'meal_delivery', 'meal_takeaway', 'bar'],
+    transport: ['airport', 'bus_station', 'train_station', 'subway_station', 'taxi_stand', 'transit_station', 'light_rail_station'],
+    amusement_park: ['amusement_park', 'zoo', 'aquarium', 'night_club', 'casino', 'movie_theater', 'campground', 'tourist_attraction'],
+    art_gallery: ['art_gallery', 'museum', 'arts & theater', 'film'],
+    sports: ['sports', 'baseball', 'stadium', 'mlb', 'hockey', 'gym', 'nhl', 'group', 'team', 'miscellaneous'],
+    car: ['car_dealer', 'car_rental', 'car_repair', 'car_wash', 'gas_station', 'parking', 'moving_company'],
+    healthcare: ['hospital', 'doctor', 'dentist', 'pharmacy', 'drugstore', 'veterinary_care', 'physiotherapist', 'spa', 'beauty_salon', 'hair_care'],
+    library: ['library'],
+    real_estate: ['real_estate_agency', 'roofing_contractor', 'insurance_agency', 'lawyer', 'electrician', 'plumber', 'locksmith', 'painter', 'storage', 'furniture_store', 'home_goods_store']
+  };
+
+  function getCategory(pref) {
+    const cleaned = pref.toLowerCase();
+    for (const [category, keywords] of Object.entries(categoryMap)) {
+      if (keywords.some(keyword => cleaned.includes(keyword.replace(/_/g, ' ')))) {
+        return category;
+      }
+    }
+    return 'other';
+  }
+
   const unique = new Set();
 
   const cleaned = preferenceSources
     .flat()
-    .map((p) => (typeof p === 'string' ? p.trim() : ''))
-    .filter((p) => p && p !== 'null' && p !== 'undefined')
-    .map((p) => p.toLowerCase())
-    .filter((p) => {
+    .map(p => typeof p === 'string' ? p.trim().toLowerCase() : '')
+    .filter(p => p && p !== 'null' && p !== 'undefined')
+    .filter(p => {
       if (unique.has(p)) return false;
       unique.add(p);
       return true;
     });
 
-  return cleaned;
+  return cleaned.sort((a, b) => {
+    const catA = getCategory(a);
+    const catB = getCategory(b);
+    return categoryPriority[catA] - categoryPriority[catB];
+  });
 }
 
 
@@ -386,20 +425,20 @@ const shouldCallGooglePlaces =
   // ---------------- filtering of ticketmaster data -----------------------//
 
   // commented on 06 may 2025.
-  const ticketmasterEvents = ticketmasterRaw
-    .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-    .map((e) => eventDto(e));
-
   // const ticketmasterEvents = ticketmasterRaw
-  // .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-  // .map((e) => {
-  //   const base = eventDto(e);
-  //   base.preferences = getSortedPreferences([
-  //     e.classifications?.map((c) => c.segment?.name || c.genre?.name),
-  //     [e.name]
-  //   ]);
-  //   return base;
-  // });
+  //   .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+  //   .map((e) => eventDto(e));
+
+  const ticketmasterEvents = ticketmasterRaw
+  .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+  .map((e) => {
+    const base = eventDto(e);
+    base.preferences = getSortedPreferences([
+      e.classifications?.map((c) => c.segment?.name || c.genre?.name),
+      [e.name]
+    ]);
+    return base;
+  });
 
 
   // ---------------- filtering of ticketmaster data -----------------------//
@@ -410,16 +449,16 @@ const shouldCallGooglePlaces =
 
 
   // commented on 06 may 2025.
-  const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+  // const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
 
 
-  // const googlePlaces = googlePlacesRaw.map((p) => {
-  //   const base = placeDto(p);
-  //   base.preferences = getSortedPreferences([
-  //     [p.types], [p.name], [p.business_status]
-  //   ]);
-  //   return base;
-  // });
+  const googlePlaces = googlePlacesRaw.map((p) => {
+    const base = placeDto(p);
+    base.preferences = getSortedPreferences([
+      [p.types], [p.name], [p.business_status]
+    ]);
+    return base;
+  });
   
   // ---------------- filtering of googlePlace data -----------------------//
 
@@ -428,20 +467,20 @@ const shouldCallGooglePlaces =
 
  
   // commented on 06 may 2025.
-  const dbEvents = dbEventsRaw
-    .filter((e) => new Date(e.dateTime) > now)
-    .map((e) => dbEventDto(e));
-
-
   // const dbEvents = dbEventsRaw
-  // .filter((e) => new Date(e.dateTime) > now)
-  // .map((e) => {
-  //   const base = dbEventDto(e);
-  //   base.preferences = getSortedPreferences([
-  //     [e.category, e.subCategory, e.name, e.tags]
-  //   ]);
-  //   return base;
-  // });
+  //   .filter((e) => new Date(e.dateTime) > now)
+  //   .map((e) => dbEventDto(e));
+
+
+  const dbEvents = dbEventsRaw
+  .filter((e) => new Date(e.dateTime) > now)
+  .map((e) => {
+    const base = dbEventDto(e);
+    base.preferences = getSortedPreferences([
+      [e.category, e.subCategory, e.name, e.tags]
+    ]);
+    return base;
+  });
 
 
   // ---------------- filtering of custom db event data -----------------------//
