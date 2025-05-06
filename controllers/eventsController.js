@@ -256,61 +256,275 @@ const USE_STRING_MATCHING = true; // Enable fuzzy match for title variation
 
 // with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
+// function fetchPlaceType(type) {
+//   switch (type.toLowerCase()) {
+//     case 'restaurant':
+//     case 'cafe':
+//     case 'bakery':
+//     case 'meal_delivery':
+//     case 'meal_takeaway':
+//     case 'bar':
+//       return 'restaurant';
+
+//     case 'airport':
+//     case 'bus_station':
+//     case 'train_station':
+//     case 'subway_station':
+//     case 'taxi_stand':
+//     case 'transit_station':
+//     case 'light_rail_station':
+//       return 'transport';
+
+//     case 'amusement_park':
+//     case 'zoo':
+//     case 'aquarium':
+//     case 'night_club':
+//     case 'casino':
+//     case 'movie_theater':
+//     case 'campground':
+//     case 'tourist_attraction':
+//       return 'amusement_park';
+
+//     case 'art_gallery':
+//     case 'museum':
+//     case 'arts & theater':
+//     case 'arts & theatre':
+//     case 'film':
+//       return 'art_gallery';
+
+//     case 'sports':
+//     case 'baseball':
+//     case 'stadium':
+//     case 'mlb':
+//     case 'hockey':
+//     case 'gym':
+//     case 'nhl':
+//     case 'group':
+//     case 'team':
+//     case 'miscellaneous':
+//       return 'sports';
+
+//     case 'car_dealer':
+//     case 'car_rental':
+//     case 'car_repair':
+//     case 'car_wash':
+//     case 'gas_station':
+//     case 'parking':
+//     case 'moving_company':
+//       return 'car';
+
+//     case 'hospital':
+//     case 'doctor':
+//     case 'dentist':
+//     case 'pharmacy':
+//     case 'drugstore':
+//     case 'veterinary_care':
+//     case 'physiotherapist':
+//     case 'spa':
+//     case 'beauty_salon':
+//     case 'hair_care':
+//       return 'healthcare';
+
+//     case 'library':
+//       return 'library';
+
+//     case 'real_estate_agency':
+//     case 'roofing_contractor':
+//     case 'insurance_agency':
+//     case 'lawyer':
+//     case 'electrician':
+//     case 'plumber':
+//     case 'locksmith':
+//     case 'painter':
+//     case 'storage':
+//     case 'furniture_store':
+//     case 'home_goods_store':
+//       return 'real_estate';
+
+//     case 'theatre':
+//     case 'musical':
+//     case 'concerts':
+//       return 'concerts';
+
+//     default:
+//       return null;
+//   }
+// }
+
+// function getSortedPreferences(preferenceSources = []) {
+//   const flatList = preferenceSources.flat().map(p => typeof p === 'string' ? p.trim().toLowerCase() : '');
+//   const uniqueSet = new Set();
+//   const cleanedPreferences = [];
+
+//   let matchedCategory = null;
+
+//   for (const pref of flatList) {
+//     if (!pref || pref === 'null' || pref === 'undefined') continue;
+//     if (!uniqueSet.has(pref)) {
+//       uniqueSet.add(pref);
+//       cleanedPreferences.push(pref);
+//     }
+
+//     const typeMatch = fetchPlaceType(pref);
+//     if (!matchedCategory && typeMatch) {
+//       matchedCategory = typeMatch;
+//     }
+//   }
+
+//   const result = [];
+
+//   if (matchedCategory) {
+//     result.push(matchedCategory);
+//   } else {
+//     result.push('other');
+//   }
+
+//   // Add the rest (excluding the first matched category if it also appears in cleaned)
+//   for (const item of cleanedPreferences) {
+//     if (item !== matchedCategory) {
+//       result.push(item);
+//     }
+//   }
+
+//   return result;
+// }
+
+function fetchPlaceType(type) {
+  const key = type.toLowerCase();
+  switch (key) {
+    case 'restaurant':
+    case 'cafe':
+    case 'bakery':
+    case 'meal_delivery':
+    case 'meal_takeaway':
+    case 'bar':
+      return 'restaurant';
+
+    case 'airport':
+    case 'bus_station':
+    case 'train_station':
+    case 'subway_station':
+    case 'taxi_stand':
+    case 'transit_station':
+    case 'light_rail_station':
+      return 'transport';
+
+    case 'amusement_park':
+    case 'zoo':
+    case 'aquarium':
+    case 'night_club':
+    case 'casino':
+    case 'movie_theater':
+    case 'campground':
+    case 'tourist_attraction':
+      return 'amusement_park';
+
+    case 'art_gallery':
+    case 'museum':
+    case 'arts & theater':
+    case 'arts & theatre':
+    case 'film':
+      return 'art_gallery';
+
+    case 'sports':
+    case 'baseball':
+    case 'stadium':
+    case 'mlb':
+    case 'hockey':
+    case 'gym':
+    case 'nhl':
+    case 'group':
+    case 'team':
+    case 'miscellaneous':
+      return 'sports';
+
+    case 'car_dealer':
+    case 'car_rental':
+    case 'car_repair':
+    case 'car_wash':
+    case 'gas_station':
+    case 'parking':
+    case 'moving_company':
+      return 'car';
+
+    case 'hospital':
+    case 'doctor':
+    case 'dentist':
+    case 'pharmacy':
+    case 'drugstore':
+    case 'veterinary_care':
+    case 'physiotherapist':
+    case 'spa':
+    case 'beauty_salon':
+    case 'hair_care':
+      return 'healthcare';
+
+    case 'library':
+      return 'library';
+
+    case 'real_estate_agency':
+    case 'roofing_contractor':
+    case 'insurance_agency':
+    case 'lawyer':
+    case 'electrician':
+    case 'plumber':
+    case 'locksmith':
+    case 'painter':
+    case 'storage':
+    case 'furniture_store':
+    case 'home_goods_store':
+      return 'real_estate';
+
+    case 'theatre':
+    case 'musical':
+    case 'concerts':
+    case 'music':
+      return 'concerts';
+
+    default:
+      return null;
+  }
+}
+
 function getSortedPreferences(preferenceSources = []) {
-  const categoryPriority = {
-    concerts: 1,
-    restaurant: 2,
-    transport: 3,
-    amusement_park: 4,
-    art_gallery: 5,
-    sports: 6,
-    car: 7,
-    healthcare: 8,
-    library: 9,
-    real_estate: 10,
-    other: 11
-  };
+  const flatList = preferenceSources.flat().map(p => typeof p === 'string' ? p.trim().toLowerCase() : '');
+  const uniqueSet = new Set();
+  const cleanedPreferences = [];
 
-  const categoryMap = {
-    concerts: ['theatre', 'musical', 'arts & theatre', 'concerts'],
-    restaurant: ['restaurant', 'cafe', 'bakery', 'meal_delivery', 'meal_takeaway', 'bar'],
-    transport: ['airport', 'bus_station', 'train_station', 'subway_station', 'taxi_stand', 'transit_station', 'light_rail_station'],
-    amusement_park: ['amusement_park', 'zoo', 'aquarium', 'night_club', 'casino', 'movie_theater', 'campground', 'tourist_attraction'],
-    art_gallery: ['art_gallery', 'museum', 'arts & theater', 'film'],
-    sports: ['sports', 'baseball', 'stadium', 'mlb', 'hockey', 'gym', 'nhl', 'group', 'team', 'miscellaneous'],
-    car: ['car_dealer', 'car_rental', 'car_repair', 'car_wash', 'gas_station', 'parking', 'moving_company'],
-    healthcare: ['hospital', 'doctor', 'dentist', 'pharmacy', 'drugstore', 'veterinary_care', 'physiotherapist', 'spa', 'beauty_salon', 'hair_care'],
-    library: ['library'],
-    real_estate: ['real_estate_agency', 'roofing_contractor', 'insurance_agency', 'lawyer', 'electrician', 'plumber', 'locksmith', 'painter', 'storage', 'furniture_store', 'home_goods_store']
-  };
+  let matchedCategory = null;
 
-  function getCategory(pref) {
-    const cleaned = pref.toLowerCase();
-    for (const [category, keywords] of Object.entries(categoryMap)) {
-      if (keywords.some(keyword => cleaned.includes(keyword.replace(/_/g, ' ')))) {
-        return category;
-      }
+  for (const pref of flatList) {
+    if (!pref || pref === 'null' || pref === 'undefined') continue;
+    if (!uniqueSet.has(pref)) {
+      uniqueSet.add(pref);
+      cleanedPreferences.push(pref);
     }
-    return 'other';
+
+    if (!matchedCategory) {
+      const typeMatch = fetchPlaceType(pref);
+      if (typeMatch) matchedCategory = typeMatch;
+    }
   }
 
-  const unique = new Set();
+  if (cleanedPreferences.length === 0) return ['other'];
 
-  const cleaned = preferenceSources
-    .flat()
-    .map(p => typeof p === 'string' ? p.trim().toLowerCase() : '')
-    .filter(p => p && p !== 'null' && p !== 'undefined')
-    .filter(p => {
-      if (unique.has(p)) return false;
-      unique.add(p);
-      return true;
-    });
+  const result = [];
 
-  return cleaned.sort((a, b) => {
-    const catA = getCategory(a);
-    const catB = getCategory(b);
-    return categoryPriority[catA] - categoryPriority[catB];
-  });
+  // If match found, push it first, then the rest
+  if (matchedCategory) {
+    result.push(matchedCategory);
+  } else {
+    result.push('other');
+  }
+
+  // Add the rest (excluding duplicate of first item)
+  for (const item of cleanedPreferences) {
+    if (item !== matchedCategory) {
+      result.push(item);
+    }
+  }
+
+  return result;
 }
 
 
