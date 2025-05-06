@@ -257,6 +257,24 @@ const USE_STRING_MATCHING = true; // Enable fuzzy match for title variation
 // with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
 
+function getSortedPreferences(preferenceSources = []) {
+  const unique = new Set();
+
+  const cleaned = preferenceSources
+    .flat()
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter((p) => p && p !== 'null' && p !== 'undefined')
+    .map((p) => p.toLowerCase())
+    .filter((p) => {
+      if (unique.has(p)) return false;
+      unique.add(p);
+      return true;
+    });
+
+  return cleaned;
+}
+
+
 exports.getEvents = catchAsync(async (req, res, next) => {
   let {
     query,
@@ -364,15 +382,69 @@ const shouldCallGooglePlaces =
 
   const now = new Date();
 
-  const ticketmasterEvents = ticketmasterRaw
-    .filter((e) => new Date(e.dates?.start?.dateTime) > now)
-    .map((e) => eventDto(e));
 
-  const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+  // ---------------- filtering of ticketmaster data -----------------------//
+
+  // commented on 06 may 2025.
+  // const ticketmasterEvents = ticketmasterRaw
+  //   .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+  //   .map((e) => eventDto(e));
+
+  const ticketmasterEvents = ticketmasterRaw
+  .filter((e) => new Date(e.dates?.start?.dateTime) > now)
+  .map((e) => {
+    const base = eventDto(e);
+    base.preferences = getSortedPreferences([
+      e.classifications?.map((c) => c.segment?.name || c.genre?.name),
+      [e.name]
+    ]);
+    return base;
+  });
+
+
+  // ---------------- filtering of ticketmaster data -----------------------//
+
+
+
+  // ---------------- filtering of google place data -----------------------//
+
+
+  // commented on 06 may 2025.
+  // const googlePlaces = googlePlacesRaw.map((p) => placeDto(p));
+
+
+  const googlePlaces = googlePlacesRaw.map((p) => {
+    const base = placeDto(p);
+    base.preferences = getSortedPreferences([
+      [p.types], [p.name], [p.business_status]
+    ]);
+    return base;
+  });
+  
+  // ---------------- filtering of googlePlace data -----------------------//
+
+
+  // ---------------- filtering of custom db event data -----------------------//
+
+ 
+  // commented on 06 may 2025.
+  // const dbEvents = dbEventsRaw
+  //   .filter((e) => new Date(e.dateTime) > now)
+  //   .map((e) => dbEventDto(e));
+
 
   const dbEvents = dbEventsRaw
-    .filter((e) => new Date(e.dateTime) > now)
-    .map((e) => dbEventDto(e));
+  .filter((e) => new Date(e.dateTime) > now)
+  .map((e) => {
+    const base = dbEventDto(e);
+    base.preferences = getSortedPreferences([
+      [e.category, e.subCategory, e.name, e.tags]
+    ]);
+    return base;
+  });
+
+
+  // ---------------- filtering of custom db event data -----------------------//
 
   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
 
