@@ -17,7 +17,7 @@ const fileFilter = (req, file, cb) => {
 
 // Multer configuration to limit file size and accept images only
 const upload = multer({
-    limits: { fileSize: 2 * 1024 * 1024 }, // Limit to 2 MB
+    limits: {   fileSize: 50 * 1024 * 1024 },// 50MB, // Limit to 2 MB
     fileFilter: fileFilter,
     storage: multer.memoryStorage() // Store files in memory before uploading to S3
 });
