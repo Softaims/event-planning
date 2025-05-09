@@ -1477,16 +1477,32 @@ exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
   } = extractedData;
   
   console.log(extractedData, 'data')
+
+  const useKeywordFallback =
+  !segment_id?.trim() && !genre_id?.trim() && !subgenre_id?.trim();
+
+  
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
     eventService.fetchTicketmasterEventsForAISearch2({
-      // keyword: keywords,
-      latitude,
-      longitude,
-      segmentId: segment_id,
-      genreId: genre_id,
-      subgenreId: subgenre_id,
-      radius,
-    }),
+    //   // keyword: keywords,
+    //   latitude,
+    //   longitude,
+    //   segmentId: segment_id,
+    //   genreId: genre_id,
+    //   subgenreId: subgenre_id,
+    //   radius,
+    // }),
+    ...(useKeywordFallback
+      ? { keyword: keywords }
+      : {
+          segmentId: segment_id,
+          genreId: genre_id,
+          subgenreId: subgenre_id,
+        }),
+    latitude,
+    longitude,
+    radius,
+  }),
     eventService.fetchGooglePlaces({
       query: keywords,
       city,
