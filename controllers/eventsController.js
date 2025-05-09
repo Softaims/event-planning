@@ -1481,7 +1481,7 @@ exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
   const useKeywordFallback =
   !segment_id?.trim() && !genre_id?.trim() && !subgenre_id?.trim();
 
-  
+
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
     eventService.fetchTicketmasterEventsForAISearch2({
     //   // keyword: keywords,
@@ -1986,6 +1986,25 @@ exports.deleteAllEvents = async (req, res) => {
    const a =  await prisma.event.deleteMany({ where: {
       latitude: null,
       longitude: null,
+    }});
+console.log(a , 'aaaa')
+    res.status(200).json({
+      status: 'success',
+      message: 'All events deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete events',
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteAllCustomeEvents = async (req, res) => {
+  try {
+   const a =  await prisma.event.deleteMany({ where: {
+    source : 'UNI Featured'
     }});
 console.log(a , 'aaaa')
     res.status(200).json({

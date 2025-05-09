@@ -322,6 +322,12 @@ router.get(
   eventsController.deleteAllEvents
 );
 
+router.get(
+  "/delete-all-custome-events",
+  // authMiddleware.protect,
+  eventsController.deleteAllCustomeEvents
+);
+
 
 
 
