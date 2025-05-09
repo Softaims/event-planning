@@ -530,6 +530,52 @@ exports.fetchTicketmasterEventsForAISearch = async ({
 };
 
 
+// ----------------------- new function from 09 may which include segment id , subgenre id functionality
+
+exports.fetchTicketmasterEventsForAISearch2 = async ({
+  keyword,
+  latitude,
+  longitude,
+  segmentId,
+  genreId,
+  subgenreId,
+  radius = 75,
+}) => {
+  try {
+    const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
+
+    const params = {
+      apikey: process.env.TICKETMASTER_API_KEY,
+      ...(keyword && { keyword }),
+      ...(latlong && { latlong }),
+      ...(segmentId && { segmentId }),         // segment filter
+      ...(genreId && { genreId }),             // genre filter
+      ...(subgenreId && { subGenreId: subgenreId }), // subgenre filter
+      radius,
+      locale: "*",
+      size: 200,
+    };
+
+    console.log("🎫 Ticketmaster AI Search Params:", params);
+
+    const response = await axios.get(TICKET_MASTER_URL, { params });
+    const events = response.data._embedded?.events || [];
+
+    const now = new Date();
+    const filteredEvents = events.filter((event) => {
+      const date = new Date(event.dates?.start?.dateTime);
+      return date > now;
+    });
+
+    console.log(`✅ [AI] Fetched ${filteredEvents.length} Ticketmaster events`);
+    return filteredEvents;
+  } catch (error) {
+    logger.error("❌ [AI] Ticketmaster fetch error:", error);
+    throw new AppError("AI Ticketmaster fetch failed", 500);
+  }
+};
+
+
 // ------------- my new function from 21 april 
 
 // exports.fetchGooglePlaces = async ({

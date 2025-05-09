@@ -60,6 +60,12 @@ router.get("/", authMiddleware.protect, eventsController.getEvents);
 
 router.get("/ai-search", authMiddleware.protect, eventsController.aiSearchEvents);
 
+router.get("/ai-search/classification", authMiddleware.protect, eventsController.aiSearchEvents2);
+
+router.get("/ai-search/question", authMiddleware.protect, eventsController.aiSearchEvents3);
+
+
+
 /**
  * @swagger
  * /events/attendance/{eventId}:
