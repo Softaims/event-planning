@@ -1481,7 +1481,7 @@ exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
   const useKeywordFallback =
   !segment_id?.trim() && !genre_id?.trim() && !subgenre_id?.trim();
 
-
+console.log(useKeywordFallback, 'back')
   const [ticketmasterRaw, googlePlacesRaw, dbEventsRaw] = await Promise.all([
     eventService.fetchTicketmasterEventsForAISearch2({
     //   // keyword: keywords,

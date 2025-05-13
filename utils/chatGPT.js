@@ -286,6 +286,9 @@ Only return the JSON object. Do not include any explanation or commentary.
 
   const rawContent = response.data.choices[0].message.content.trim();
 
+   const usage = response.data.usage;
+
+  
   try {
     return JSON.parse(rawContent);
   } catch (err) {
@@ -309,6 +312,7 @@ async function extractSearchIntentWithClassification(userQuery) {
 
   const matchedGenre = matched.Genre || "";
   const matchedSubgenre = matched.Subgenre || "";
+  console.log(matchedGenre,matchedSubgenre, 'prompts')
 
   // Step 2: Find corresponding entry in classification.json
   const classificationMatch = classificationList.find(
@@ -317,10 +321,14 @@ async function extractSearchIntentWithClassification(userQuery) {
       entry.subgenre_name.toLowerCase() === matchedSubgenre.toLowerCase()
   );
 
+  console.log(classificationMatch, 'match')
   // Step 3: Extract IDs if match found
   const segmentId = classificationMatch?.segment_id || "";
   const genreId = classificationMatch?.genre_id || "";
   const subgenreId = classificationMatch?.subgenre_id || "";
+
+  console.log(segmentId,genreId,subgenreId, 'match')
+
 
   const prompt = `
 You are an intelligent assistant that extracts structured search intent from casual, conversational user queries about **events in the USA**.
@@ -371,6 +379,13 @@ Only return the JSON object. Do not include any explanation or commentary.
   );
 
   const rawContent = response.data.choices[0].message.content.trim();
+
+  const usage = response.data.usage;
+  //  console.log(usage, 'usage')
+  // console.log("Input Tokens:", usage.prompt_tokens);
+  // console.log("Output Tokens:", usage.completion_tokens);
+  // console.log("Total Tokens:", usage.total_tokens);
+
 
   try {
     return JSON.parse(rawContent);

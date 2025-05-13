@@ -383,6 +383,12 @@
     "Subgenre": "Bandy",
     "Sample Prompt": "Where can I find bandy experiences nearby?"
   },
+    {
+    "": 21,
+    "Genre": "Baseball",
+    "Subgenre": "Professional",
+    "Sample Prompt": "Baseball or baseball"
+  },
   {
     "": 21,
     "Genre": "Baseball",
@@ -454,6 +460,12 @@
     "Genre": "Baseball",
     "Subgenre": "Professional",
     "Sample Prompt": "Where can I find professional experiences nearby?"
+  },
+    {
+    "": 25,
+    "Genre": "Basketball",
+    "Subgenre": "Men Professional",
+    "Sample Prompt": "Basketball or basketball"
   },
   {
     "": 25,
