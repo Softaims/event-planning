@@ -6911,6 +6911,12 @@
     "Subgenre": "Zydeco",
     "Sample Prompt": "Where can I find zydeco experiences nearby?"
   },
+   {
+    "": 383,
+    "Genre": "Hip-Hop/Rap",
+    "Subgenre": "Alternative Rap",
+    "Sample Prompt": "rap concerts or concert near me?"
+  },
   {
     "": 383,
     "Genre": "Hip-Hop/Rap",
