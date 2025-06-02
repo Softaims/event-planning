@@ -7,40 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model User {
-//   id                            Int                       @id @default(autoincrement())
-//   email                         String
-//   emailVerified                 Boolean                   @default(false)
-//   emailVerificationToken        String?
-//   password                      String
-//   firstName                     String
-//   lastName                      String
-//   phoneNumber                   String                    @unique
-//   dob                           DateTime
-//   pronouns                      Pronouns?
-//   profileImage                  String?
-//   passwordChangedAt             DateTime                  @default(now())
-//   passwordResetToken            String?
-//   passwordResetExpires          DateTime?
-//   active                        Boolean                   @default(true)
-//   role                          Role                      @default(User)
-//   createdAt                     DateTime                  @default(now())
-//   updatedAt                     DateTime                  @updatedAt
-//   currentAuthToken              String?
-//   phoneVerificationToken        String?
-//   phoneVerified                 Boolean                   @default(false)
-//   phoneVerificationTokenExpires DateTime?
-//   preferences                   Json?
-//   isRegistrationComplete        Boolean                   @default(false)
-//   lat                           Float?
-//   // location                      Unsupported("geography")?
-//   long                          Float?
-//   isProfilePublic               Boolean                   @default(true)
-//   fcmToken                      String?
-//   createdEvents                 Event[]                   @relation("EventCreatedBy")
-//   eventAttendances              EventAttendance[]
-// }
-
 // new model of user from 28 may 2025.
 
 
