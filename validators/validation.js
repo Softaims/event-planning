@@ -528,117 +528,215 @@ const userValidations = {
 };
 
 const authValidations = {
-  register: [
-    check("email")
-      .isEmail()
-      .withMessage("Please provide a valid email address.")
-      .bail()
-      .custom(async (email) => {
-        // 1️⃣ Check if the email is valid using email-validator
-        if (!emailValidator.validate(email)) {
-          throw new Error("Invalid email format.");
-        }
-        return true;
-      }),
-    check("password")
-      .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters long.")
-      .matches(/[a-z]/)
-      .withMessage("Password must contain at least one lowercase letter.")
-      .matches(/[A-Z]/)
-      .withMessage("Password must contain at least one uppercase letter.")
-      .matches(/[0-9]/)
-      .withMessage("Password must contain at least one number.")
-      .matches(/[\W_]/)
-      .withMessage("Password must contain at least one special character."),
+  // register: [
+  //   check("email")
+  //     .isEmail()
+  //     .withMessage("Please provide a valid email address.")
+  //     .bail()
+  //     .custom(async (email) => {
+  //       // 1️⃣ Check if the email is valid using email-validator
+  //       if (!emailValidator.validate(email)) {
+  //         throw new Error("Invalid email format.");
+  //       }
+  //       return true;
+  //     }),
+  //   check("password")
+  //     .isLength({ min: 8 })
+  //     .withMessage("Password must be at least 8 characters long.")
+  //     .matches(/[a-z]/)
+  //     .withMessage("Password must contain at least one lowercase letter.")
+  //     .matches(/[A-Z]/)
+  //     .withMessage("Password must contain at least one uppercase letter.")
+  //     .matches(/[0-9]/)
+  //     .withMessage("Password must contain at least one number.")
+  //     .matches(/[\W_]/)
+  //     .withMessage("Password must contain at least one special character."),
 
-    check("confirmPassword").custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error("Passwords do not match.");
+  //   check("confirmPassword").custom((value, { req }) => {
+  //     if (value !== req.body.password) {
+  //       throw new Error("Passwords do not match.");
+  //     }
+  //     return true;
+  //   }),
+
+  //   check("firstName")
+  //     .not()
+  //     .isEmpty()
+  //     .withMessage("First Name is required.")
+  //     .trim(),
+
+  //   check("lastName")
+  //     .not()
+  //     .isEmpty()
+  //     .withMessage("Last Name is required.")
+  //     .trim(),
+
+  //   check("phoneNumber")
+  //     .not()
+  //     .isEmpty()
+  //     .withMessage("Phone number is required.")
+  //     .custom((value) => {
+  //       const phoneNumber = parsePhoneNumberFromString(value);
+  //       if (!phoneNumber || !phoneNumber.isValid()) {
+  //         throw new Error("Invalid phone number format.");
+  //       }
+
+  //       // Restrict USA (+1)
+  //       const allowedCountries = ["US"];
+  //       if (!allowedCountries.includes(phoneNumber.country)) {
+  //         throw new Error(
+  //           "Only phone numbers from USA (+1) are allowed."
+  //         );
+  //       }
+
+  //       return true;
+  //     }),
+
+  //   check("dob")
+  //     .not()
+  //     .isEmpty()
+  //     .withMessage("Date of Birth is required.")
+  //     .custom((value) => {
+  //       const dob = moment(value, "YYYY-MM-DD", true);
+  //       if (!dob.isValid()) {
+  //         throw new Error("Invalid date format. Use YYYY-MM-DD.");
+  //       }
+  //       const age = moment().diff(dob, "years");
+  //       if (age < 18) {
+  //         throw new Error("You must be at least 18 years old.");
+  //       }
+  //       return true;
+  //     }),
+
+  //   check("pronouns")
+  //     .not()
+  //     .isEmpty()
+  //     .withMessage("Pronouns required.")
+  //     .isIn(["he_him", "she_her", "they_them", "other"])
+  //     .withMessage("Invalid pronoun selection."),
+
+  //   // check("profileImage").custom((_, { req }) => {
+  //   //   if (!req.file) {
+  //   //     throw new Error("Profile image is required.");
+  //   //   }
+
+  //   //   const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
+  //   //   if (!allowedMimeTypes.includes(req.file.mimetype)) {
+  //   //     throw new Error(
+  //   //       "Profile image must be a valid image file (JPEG, PNG, JPG)."
+  //   //     );
+  //   //   }
+  //   //   return true;
+  //   // }),
+
+  //   check("lat")
+  //     .optional()
+  //     .isFloat({ min: -90, max: 90 })
+  //     .withMessage("Invalid latitude value."),
+
+  //   check("long")
+  //     .optional()
+  //     .isFloat({ min: -180, max: 180 })
+  //     .withMessage("Invalid longitude value."),
+  // ],
+  sendPhone: [  
+    check("phoneNumber")
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    .custom((value) => {
+      const phoneNumber = parsePhoneNumberFromString(value);
+      if (!phoneNumber || !phoneNumber.isValid()) {
+        throw new Error("Invalid phone number format.");
+      }
+
+      const allowedCountries = ["US"];
+      if (!allowedCountries.includes(phoneNumber.country)) {
+        throw new Error("Only phone numbers from USA (+1) are allowed.");
+      }
+
+      return true;
+    }),
+  ],
+  register: [
+  check("email")
+    .isEmail()
+    .withMessage("Please provide a valid email address.")
+    .bail()
+    .custom(async (email) => {
+      if (!emailValidator.validate(email)) {
+        throw new Error("Invalid email format.");
       }
       return true;
     }),
 
-    check("firstName")
-      .not()
-      .isEmpty()
-      .withMessage("First Name is required.")
-      .trim(),
+  check("password")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters long.")
+    .matches(/[a-z]/)
+    .withMessage("Password must contain at least one lowercase letter.")
+    .matches(/[A-Z]/)
+    .withMessage("Password must contain at least one uppercase letter.")
+    .matches(/[0-9]/)
+    .withMessage("Password must contain at least one number.")
+    .matches(/[\W_]/)
+    .withMessage("Password must contain at least one special character."),
 
-    check("lastName")
-      .not()
-      .isEmpty()
-      .withMessage("Last Name is required.")
-      .trim(),
+  check("confirmPassword").custom((value, { req }) => {
+    if (value !== req.body.password) {
+      throw new Error("Passwords do not match.");
+    }
+    return true;
+  }),
 
-    check("phoneNumber")
-      .not()
-      .isEmpty()
-      .withMessage("Phone number is required.")
-      .custom((value) => {
-        const phoneNumber = parsePhoneNumberFromString(value);
-        if (!phoneNumber || !phoneNumber.isValid()) {
-          throw new Error("Invalid phone number format.");
-        }
+  check("firstName").notEmpty().withMessage("First Name is required.").trim(),
+  check("lastName").notEmpty().withMessage("Last Name is required.").trim(),
 
-        // Restrict USA (+1)
-        const allowedCountries = ["US"];
-        if (!allowedCountries.includes(phoneNumber.country)) {
-          throw new Error(
-            "Only phone numbers from USA (+1) are allowed."
-          );
-        }
+  // check("username")
+  //   .notEmpty()
+  //   .withMessage("Username is required.")
+  //   .isLength({ min: 3, max: 30 })
+  //   .withMessage("Username must be between 3 and 30 characters."),
+    // .matches(/^[a-zA-Z0-9_.-]*$/)
+    // .withMessage("Username must be alphanumeric or contain _, ., -"),
 
-        return true;
-      }),
+  check("uniqueCode")
+    .optional()
+    .isString()
+    .withMessage("Unique code must be a string."),
 
-    check("dob")
-      .not()
-      .isEmpty()
-      .withMessage("Date of Birth is required.")
-      .custom((value) => {
-        const dob = moment(value, "YYYY-MM-DD", true);
-        if (!dob.isValid()) {
-          throw new Error("Invalid date format. Use YYYY-MM-DD.");
-        }
-        const age = moment().diff(dob, "years");
-        if (age < 18) {
-          throw new Error("You must be at least 18 years old.");
-        }
-        return true;
-      }),
 
-    check("pronouns")
-      .not()
-      .isEmpty()
-      .withMessage("Pronouns required.")
-      .isIn(["he_him", "she_her", "they_them", "other"])
-      .withMessage("Invalid pronoun selection."),
 
-    // check("profileImage").custom((_, { req }) => {
-    //   if (!req.file) {
-    //     throw new Error("Profile image is required.");
-    //   }
+  check("dob")
+    .notEmpty()
+    .withMessage("Date of Birth is required.")
+    .custom((value) => {
+      const dob = moment(value, "YYYY-MM-DD", true);
+      if (!dob.isValid()) {
+        throw new Error("Invalid date format. Use YYYY-MM-DD.");
+      }
+      const age = moment().diff(dob, "years");
+      if (age < 18) {
+        throw new Error("You must be at least 18 years old.");
+      }
+      return true;
+    }),
 
-    //   const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg"];
-    //   if (!allowedMimeTypes.includes(req.file.mimetype)) {
-    //     throw new Error(
-    //       "Profile image must be a valid image file (JPEG, PNG, JPG)."
-    //     );
-    //   }
-    //   return true;
-    // }),
+  // check("pronouns")
+  //   .notEmpty()
+  //   .withMessage("Pronouns required.")
+  //   .isIn(["he_him", "she_her", "they_them", "other"])
+  //   .withMessage("Invalid pronoun selection."),
 
-    check("lat")
-      .optional()
-      .isFloat({ min: -90, max: 90 })
-      .withMessage("Invalid latitude value."),
+  check("lat")
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage("Invalid latitude value."),
 
-    check("long")
-      .optional()
-      .isFloat({ min: -180, max: 180 })
-      .withMessage("Invalid longitude value."),
-  ],
+  check("long")
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage("Invalid longitude value."),
+],
   login: [
     check("phoneNumber")
       .not()

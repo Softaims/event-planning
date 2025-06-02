@@ -51,11 +51,25 @@ const router = express.Router();
  *       400:
  *         description: Bad request.
  */
+
+router.post(
+  "/send-phone",
+   authValidations.sendPhone,
+  authController.sendPhoneNumber
+);
+
+
+
+
+router.post("/verify-phone", authController.verifyPhoneCode);
+
+
 router.post(
   "/register",
   upload.single("profileImage"),
   authValidations.register,
   validationMiddleware.validate,
+   authMiddleware.protect,
   authController.register
 );
 
@@ -259,6 +273,5 @@ router.post("/resend-verification-code", authController.resendVerificationCode);
  *       401:
  *         description: Invalid or expired OTP.
  */
-router.post("/verify-phone", authController.verifyPhoneCode);
 
 module.exports = router;

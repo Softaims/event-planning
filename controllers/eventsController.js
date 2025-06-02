@@ -1704,7 +1704,7 @@ exports.aiSearchEvents3 = catchAsync(async (req, res, next) => {
 
 // ai search with functionlity of segment id , subgenre id live from 09 may 2025.
 exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
-  const { query, latitude, longitude, radius = 75 } = req.query;
+  const { query, latitude, longitude, radius = 30 } = req.query;
   const userId = req.user.id;
 
   if (!query || query.trim() === "") {
@@ -1713,6 +1713,36 @@ exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
 
   if (!latitude || !longitude) {
     return next(new AppError("Latitude and Longitude are required", 400));
+  }
+
+
+
+   // ✅ Fetch user and check unique_code & ai_search_count
+  const user = await authService.findUserById(userId);
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (user.uniqueCode === "NORMAL") {
+    if (user.aiSearchCount >= 3) {
+      return res.status(400).json({
+        status: "false",
+        message: "You have crossed the limit of AI searches.",
+        data: {}
+      });
+    }
+
+    // ✅ Increment ai_search_count
+    // user.aiSearchCount += 1;
+    // await user.save();
+
+    await prisma.user.update({
+  where: { id: userId },
+  data: {
+    aiSearchCount: user.aiSearchCount + 1
+  }
+});
   }
 
   const extractedData = await extractSearchIntentWithClassification(query);

@@ -12,77 +12,381 @@ const s3Service = require("../utils/s3Service");
 const { getDefaultPreferences } = require("../utils/preferencesHelper");
 const {sendNotification} = require("../services/sendNotification")
 
+
+// old register api
+
+
+
+// exports.register = catchAsync(async (req, res, next) => {
+//   let {
+//     email,
+//     password,
+//     firstName,
+//     lastName,
+//     phoneNumber,
+//     dob,
+//     pronouns,
+//     lat,
+//     long,
+//     fcmToken, // ✅ Accept FCM Token
+//   } = req.body;
+//   dob = new Date(dob);
+
+//   lat = lat ? parseFloat(lat) : null;
+//   long = long ? parseFloat(long) : null;
+
+//   if (isNaN(lat) || isNaN(long)) {
+//     return next(new AppError("Invalid latitude or longitude format.", 400));
+//   }
+
+//   // Check if phone already exists
+//   const existingUser = await authService.findUserByPhone(phoneNumber);
+//   if (existingUser) {
+//     if (!existingUser.phoneVerified) {
+//       // 🟢 User exists but not verified → Resend OTP and return success response
+//       const verificationCode = await authService.sendPhoneVerification(
+//         existingUser.id
+//       );
+//       console.log("verificationCode : ", verificationCode);
+
+//       try {
+//         if (process.env.NODE_ENV !== "development") {
+//           await twilioService.sendVerificationCode(
+//             existingUser.phoneNumber,
+//             verificationCode
+//           );
+//         }
+//       } catch (err) {
+//         logger.error(
+//           `Failed to resend verification code to: ${existingUser.phoneNumber}: ${err}`
+//         );
+//         return next(
+//           new AppError(
+//             "Failed to send verification code. Try again later.",
+//             500
+//           )
+//         );
+//       }
+
+//       return authService.createSendToken(
+//         res,
+//         existingUser,
+//         200, // HTTP Status
+//         false, // isSignup
+//         "User already registered but not verified. OTP sent again for verification."
+//       );
+//     }
+
+//     return next(new AppError("Phone number already in use.", 401)); // If user is verified, prevent re-registration
+//   }
+
+//   let profileUrl = null;
+//   // 🟢 Handle single file upload (profileImage)
+//   if (req.file) {
+//     const fileName = `${phoneNumber}.jpg`; // Name file uniquely with phone number
+//     const fileBuffer = req.file.buffer;
+
+//     if (process.env.NODE_ENV === "development") {
+//       // 🌍 Store locally in 'public/images/'
+//       const localDir = path.join(__dirname, "../public/images");
+//       if (!fs.existsSync(localDir)) {
+//         fs.mkdirSync(localDir, { recursive: true });
+//       }
+
+//       const localPath = path.join(localDir, fileName);
+//       fs.writeFileSync(localPath, fileBuffer);
+//       profileUrl = `/public/images/${fileName}`;
+//       logger.info(`Profile image stored locally: ${profileUrl}`);
+//     } else {
+//       // ☁️ Store in AWS S3
+//       profileUrl = await s3Service.uploadToS3(
+//         fileBuffer,
+//         fileName,
+//         "profileImage"
+//       );
+//       logger.info(`Profile image uploaded to S3: ${profileUrl}`);
+//     }
+//   }
+
+//   // Get Default Preferences
+//   const defaultPreferences = getDefaultPreferences();
+
+//   // Register the user
+//   const newUser = await authService.registerUser({
+//     email,
+//     password,
+//     firstName,
+//     lastName,
+//     phoneNumber,
+//     dob,
+//     pronouns,
+//     profileImage: profileUrl,
+//     isRegistrationComplete: true,
+//     preferences: defaultPreferences,
+//     lat,
+//     long,
+//     fcmToken, // ✅ Save FCM Token in DB
+//   });
+
+//   // Send OTP via Twilio
+//   const verificationCode = await authService.sendPhoneVerification(newUser.id);
+//   console.log("verificationCode : ", verificationCode);
+
+//   try {
+//     // Send SMS via Twilio
+//     if (process.env.NODE_ENV !== "development") {
+//       await twilioService.sendVerificationCode(
+//         newUser.phoneNumber,
+//         verificationCode
+//       );
+//     }
+//   } catch (err) {
+//     logger.error(
+//       `Failed to send verification code to: ${newUser.phoneNumber}`,
+//       err
+//     );
+//     // 🛑 **Delete the user if OTP fails**
+//     await authService.deleteUser(newUser.id);
+//     return next(new AppError("Failed to send verification code.", 500));
+//   }
+
+//   // Send JWT token
+//   authService.createSendToken(
+//     res,
+//     newUser,
+//     200,
+//     (isSignup = false),
+//     "Register Successfully! OTP sent for verification."
+//   );
+
+//   logger.info(`User registered: ${newUser.phoneNumber}`);
+// });
+
+
+// not working new api
+
+// exports.register = catchAsync(async (req, res, next) => {
+//   let {
+//     email,
+//     password,
+//     firstName,
+//     lastName,
+//     phoneNumber,
+//     dob,
+//     pronouns,
+//     lat,
+//     long,
+//     fcmToken,
+//     // username,
+//     uniqueCode = "NORMAL", // Default to "NORMAL"
+//   } = req.body;
+
+//   dob = new Date(dob);
+//   lat = lat ? parseFloat(lat) : null;
+//   long = long ? parseFloat(long) : null;
+
+//   if (isNaN(lat) || isNaN(long)) {
+//     return next(new AppError("Invalid latitude or longitude format.", 400));
+//   }
+
+//   const existingUser = await authService.findUserByPhone(phoneNumber);
+//   if (existingUser) {
+//     if (!existingUser.phoneVerified) {
+//       const verificationCode = await authService.sendPhoneVerification(existingUser.id);
+
+//       try {
+//         if (process.env.NODE_ENV !== "development") {
+//           await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
+//         }
+//       } catch (err) {
+//         logger.error(`Failed to resend verification code: ${err}`);
+//         return next(new AppError("Failed to send verification code. Try again later.", 500));
+//       }
+
+//       return authService.createSendToken(
+//         res,
+//         existingUser,
+//         200,
+//         false,
+//         "User already registered but not verified. OTP sent again."
+//       );
+//     }
+
+//     return next(new AppError("Phone number already in use.", 401));
+//   }
+
+//   let profileUrl = null;
+//   if (req.file) {
+//     const fileName = `${phoneNumber}.jpg`;
+//     const fileBuffer = req.file.buffer;
+
+//     if (process.env.NODE_ENV === "development") {
+//       const localDir = path.join(__dirname, "../public/images");
+//       if (!fs.existsSync(localDir)) {
+//         fs.mkdirSync(localDir, { recursive: true });
+//       }
+
+//       const localPath = path.join(localDir, fileName);
+//       fs.writeFileSync(localPath, fileBuffer);
+//       profileUrl = `/public/images/${fileName}`;
+//     } else {
+//       profileUrl = await s3Service.uploadToS3(fileBuffer, fileName, "profileImage");
+//     }
+//   }
+
+//   // 🔢 Auto-increment logic
+//   const totalUsers = await authService.countUsers();
+//   const userRegistrationNumber = totalUsers + 1;
+//   const is_limit_crossed = userRegistrationNumber > 10;
+
+//   const defaultPreferences = getDefaultPreferences();
+
+//   const newUser = await authService.registerUser({
+//     email,
+//     password,
+//     firstName,
+//     lastName,
+//     phoneNumber,
+//     dob,
+//     pronouns,
+//     profileImage: profileUrl,
+//     isRegistrationComplete: true,
+//     preferences: defaultPreferences,
+//     lat,
+//     long,
+//     fcmToken,
+//     // username,
+//     uniqueCode,
+//     userRegistrationNumber,
+//     is_limit_crossed,
+//   });
+
+//   const verificationCode = await authService.sendPhoneVerification(newUser.id);
+//   try {
+//     if (process.env.NODE_ENV !== "development") {
+//       await twilioService.sendVerificationCode(newUser.phoneNumber, verificationCode);
+//     }
+//   } catch (err) {
+//     logger.error(`Failed to send verification code: `, err);
+//     await authService.deleteUser(newUser.id);
+//     return next(new AppError("Failed to send verification code.", 500));
+//   }
+
+//   authService.createSendToken(
+//     res,
+//     newUser,
+//     200,
+//     false,
+//     "Register Successfully! OTP sent for verification."
+//   );
+// });
+
+
+//-------------------------- New Flow form 29 may 2025 -----------------------//
+
+exports.sendPhoneNumber = catchAsync(async (req, res, next) => {
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) {
+    return next(new AppError("Phone number is required", 400));
+  }
+
+  const existingUser = await authService.findUserByPhone(phoneNumber);
+
+  if (existingUser) {
+    if (existingUser.isRegistrationComplete) {
+      return next(new AppError("User already registered with this phone number.", 400));
+    }
+
+    // Resend OTP
+    const verificationCode = await authService.sendPhoneVerification(existingUser.id);
+
+    try {
+      if (process.env.NODE_ENV !== "development") {
+        await twilioService.sendVerificationCode(existingUser.phoneNumber, verificationCode);
+      }
+    } catch (err) {
+      logger.error(`Failed to resend verification code: ${err}`);
+      return next(new AppError("Failed to send verification code. Try again later.", 500));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "User already exists but not verified. OTP sent again.",
+      data: { userId: existingUser.id }
+    });
+  }
+
+  // Create a new user with phone only
+  const newUser = await authService.registerUser({
+    phoneNumber,
+    isRegistrationComplete: false,
+  });
+
+  const verificationCode = await authService.sendPhoneVerification(newUser.id);
+
+  try {
+    if (process.env.NODE_ENV !== "development") {
+      await twilioService.sendVerificationCode(phoneNumber, verificationCode);
+    }
+  } catch (err) {
+    logger.error(`Failed to send verification code: ${err}`);
+    await authService.deleteUser(newUser.id);
+    return next(new AppError("Failed to send verification code. Try again later.", 500));
+  }
+
+  return res.status(201).json({
+    status: "success",
+    message: "OTP sent to phone number.",
+    data: { userId: newUser.id }
+  });
+});
+
+
 exports.register = catchAsync(async (req, res, next) => {
-  let {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return next(new AppError("Unauthorized. User ID not found in request.", 401));
+  }
+
+  const {
     email,
     password,
     firstName,
     lastName,
-    phoneNumber,
     dob,
     pronouns,
     lat,
     long,
-    fcmToken, // ✅ Accept FCM Token
+    fcmToken,
+    uniqueCode = "NORMAL",
   } = req.body;
-  dob = new Date(dob);
 
-  lat = lat ? parseFloat(lat) : null;
-  long = long ? parseFloat(long) : null;
+  const user = await authService.findUserById(userId);
 
-  if (isNaN(lat) || isNaN(long)) {
+  if (!user) {
+    return next(new AppError("User not found.", 404));
+  }
+
+  if (user.isRegistrationComplete) {
+    return next(new AppError("Registration already completed.", 400));
+  }
+
+  const parsedDob = new Date(dob);
+  const parsedLat = lat ? parseFloat(lat) : null;
+  const parsedLong = long ? parseFloat(long) : null;
+
+  if (isNaN(parsedLat) || isNaN(parsedLong)) {
     return next(new AppError("Invalid latitude or longitude format.", 400));
   }
 
-  // Check if phone already exists
-  const existingUser = await authService.findUserByPhone(phoneNumber);
-  if (existingUser) {
-    if (!existingUser.phoneVerified) {
-      // 🟢 User exists but not verified → Resend OTP and return success response
-      const verificationCode = await authService.sendPhoneVerification(
-        existingUser.id
-      );
-      console.log("verificationCode : ", verificationCode);
-
-      try {
-        if (process.env.NODE_ENV !== "development") {
-          await twilioService.sendVerificationCode(
-            existingUser.phoneNumber,
-            verificationCode
-          );
-        }
-      } catch (err) {
-        logger.error(
-          `Failed to resend verification code to: ${existingUser.phoneNumber}: ${err}`
-        );
-        return next(
-          new AppError(
-            "Failed to send verification code. Try again later.",
-            500
-          )
-        );
-      }
-
-      return authService.createSendToken(
-        res,
-        existingUser,
-        200, // HTTP Status
-        false, // isSignup
-        "User already registered but not verified. OTP sent again for verification."
-      );
-    }
-
-    return next(new AppError("Phone number already in use.", 401)); // If user is verified, prevent re-registration
-  }
-
   let profileUrl = null;
-  // 🟢 Handle single file upload (profileImage)
   if (req.file) {
-    const fileName = `${phoneNumber}.jpg`; // Name file uniquely with phone number
+    const fileName = `${user.phoneNumber}.jpg`;
     const fileBuffer = req.file.buffer;
 
     if (process.env.NODE_ENV === "development") {
-      // 🌍 Store locally in 'public/images/'
       const localDir = path.join(__dirname, "../public/images");
       if (!fs.existsSync(localDir)) {
         fs.mkdirSync(localDir, { recursive: true });
@@ -91,109 +395,131 @@ exports.register = catchAsync(async (req, res, next) => {
       const localPath = path.join(localDir, fileName);
       fs.writeFileSync(localPath, fileBuffer);
       profileUrl = `/public/images/${fileName}`;
-      logger.info(`Profile image stored locally: ${profileUrl}`);
     } else {
-      // ☁️ Store in AWS S3
-      profileUrl = await s3Service.uploadToS3(
-        fileBuffer,
-        fileName,
-        "profileImage"
-      );
-      logger.info(`Profile image uploaded to S3: ${profileUrl}`);
+      profileUrl = await s3Service.uploadToS3(fileBuffer, fileName, "profileImage");
     }
   }
 
-  // Get Default Preferences
+  // 🔢 Auto-increment logic
+  const totalUsers = await authService.countUsers();
+  const userRegistrationNumber = totalUsers + 1;
+  const is_limit_crossed = userRegistrationNumber > 10;
+
   const defaultPreferences = getDefaultPreferences();
 
-  // Register the user
-  const newUser = await authService.registerUser({
+  const updatedUser = await authService.completeUserRegistration(userId, {
     email,
     password,
     firstName,
     lastName,
-    phoneNumber,
-    dob,
+    dob: parsedDob,
     pronouns,
+    lat: parsedLat,
+    long: parsedLong,
     profileImage: profileUrl,
-    isRegistrationComplete: true,
+    fcmToken,
+    uniqueCode,
+    userRegistrationNo: userRegistrationNumber,
+    isLimitCrossed : is_limit_crossed,
     preferences: defaultPreferences,
-    lat,
-    long,
-    fcmToken, // ✅ Save FCM Token in DB
   });
 
-  // Send OTP via Twilio
-  const verificationCode = await authService.sendPhoneVerification(newUser.id);
-  console.log("verificationCode : ", verificationCode);
-
-  try {
-    // Send SMS via Twilio
-    if (process.env.NODE_ENV !== "development") {
-      await twilioService.sendVerificationCode(
-        newUser.phoneNumber,
-        verificationCode
-      );
-    }
-  } catch (err) {
-    logger.error(
-      `Failed to send verification code to: ${newUser.phoneNumber}`,
-      err
-    );
-    // 🛑 **Delete the user if OTP fails**
-    await authService.deleteUser(newUser.id);
-    return next(new AppError("Failed to send verification code.", 500));
-  }
-
-  // Send JWT token
   authService.createSendToken(
     res,
-    newUser,
+    updatedUser,
     200,
-    (isSignup = false),
-    "Register Successfully! OTP sent for verification."
+    true,
+    "Registration completed successfully."
   );
-
-  logger.info(`User registered: ${newUser.phoneNumber}`);
 });
 
 
-exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
-  const { otp } = req.body; // User submits email and OTP
-  console.log("OTP Provided:", otp);
 
-  if (!otp) {
-    return next(new AppError("Verification code is required.", 401));
+
+
+//-------------------------- New Flow form 29 may 2025 -----------------------//
+
+
+
+// old api of verify otp
+
+// exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
+//   const { otp } = req.body; // User submits email and OTP
+//   console.log("OTP Provided:", otp);
+
+//   if (!otp) {
+//     return next(new AppError("Verification code is required.", 401));
+//   }
+
+//   const otpString = String(otp).trim();
+//   const hashedOtp = authService.hashToken(otpString); // Hash OTP for security
+//   console.log("Hashed OTP:", hashedOtp);
+
+//   // Find user with matching email and OTP
+//   const user = await prisma.user.findFirst({
+//     where: {
+//       phoneVerificationToken: hashedOtp, // Check OTP match
+//       phoneVerificationTokenExpires: { gte: new Date() }, // Not expired
+//     },
+//   });
+
+//   console.log("user : ", user);
+
+//   if (!user) {
+//     return next(new AppError("Invalid or expired OTP.", 401));
+//   }
+
+//   // Mark email as verified and remove OTP
+//   const updatedUser = await authService.verifyAccount(user);
+//   authService.createSendToken(
+//     res,
+//     updatedUser,
+//     200,
+//     (isSignup = false),
+//     "Phone Number verified successfully!"
+//   );
+// });
+
+// new verify otp api from 29 may 2025.
+
+exports.verifyPhoneCode = catchAsync(async (req, res, next) => {
+  const { otp, phoneNumber } = req.body;
+
+  if (!otp || !phoneNumber) {
+    return next(new AppError("Phone number and OTP are required.", 400));
   }
 
   const otpString = String(otp).trim();
-  const hashedOtp = authService.hashToken(otpString); // Hash OTP for security
-  console.log("Hashed OTP:", hashedOtp);
+  const hashedOtp = authService.hashToken(otpString); // Hashed for secure lookup
 
-  // Find user with matching email and OTP
   const user = await prisma.user.findFirst({
     where: {
-      phoneVerificationToken: hashedOtp, // Check OTP match
-      phoneVerificationTokenExpires: { gte: new Date() }, // Not expired
+      phoneNumber,
+      phoneVerificationToken: hashedOtp,
+      phoneVerificationTokenExpires: { gte: new Date() },
     },
   });
-
-  console.log("user : ", user);
 
   if (!user) {
     return next(new AppError("Invalid or expired OTP.", 401));
   }
 
-  // Mark email as verified and remove OTP
+  if (user.phoneVerified && user.isRegistrationComplete) {
+    return next(new AppError("Phone number is already verified and user is fully registered.", 409));
+  }
+
+  // Mark phone as verified and clear OTP
   const updatedUser = await authService.verifyAccount(user);
-  authService.createSendToken(
+
+  return authService.createSendToken(
     res,
     updatedUser,
     200,
-    (isSignup = false),
-    "Phone Number verified successfully!"
+    false,
+    "Phone number verified successfully!"
   );
 });
+
 
 exports.resendVerificationCode = catchAsync(async (req, res, next) => {
   const { phoneNumber } = req.body; // User provides phoneNumber in request

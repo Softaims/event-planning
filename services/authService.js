@@ -18,7 +18,7 @@ const verifyToken = async (token) => {
 };
 
 // Create JWT and Send Response
-const createSendToken = async (res, user, statusCode, isSignup = false, message = "") => {
+const createSendToken = async (res, user, statusCode, isSignup, message = "") => {
     let token = signToken(user);
 
     // Setup cookie options
@@ -83,17 +83,62 @@ const findUserById = async (id) => {
     });
 };
 
+// -------------------- Register User Old Function ----------------------------//
+
+
+// const registerUser = async (userData) => {
+//     // Hash the user's password before saving
+//     userData.password = await hashPassword(userData.password);
+
+//     // Create a new user in the database
+//     const newUser = await prisma.user.create({
+//         data: userData,
+//     });
+
+//     return newUser;
+// };
+
+// ------------------------ New Function as on 29 may 2025 -----------------------------//
+
 const registerUser = async (userData) => {
-    // Hash the user's password before saving
+  // Only hash password if it's provided (skip for phone-only creation)
+  if (userData.password) {
     userData.password = await hashPassword(userData.password);
+  }
 
-    // Create a new user in the database
-    const newUser = await prisma.user.create({
-        data: userData,
-    });
+  // Create the user
+  const newUser = await prisma.user.create({
+    data: userData,
+  });
 
-    return newUser;
+  return newUser;
 };
+
+const completeUserRegistration = async (userId, updateData) => {
+  // Hash password before updating
+  if (updateData.password) {
+    updateData.password = await hashPassword(updateData.password);
+  }
+
+  // Ensure registration is marked complete
+  updateData.isRegistrationComplete = true;
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+  });
+//  const user = await prisma.user.findUnique({
+//   where: { id: userId },
+// });
+  return updatedUser;
+};
+
+const countUsers = async () => {
+  return await prisma.user.count();
+};
+
+// ------------------------ New Function as on 29 may 2025 -----------------------------//
+
 
 const generateEmailVerificationToken = async (user) => {
     // Generate a 6-digit numeric code
@@ -191,6 +236,7 @@ module.exports = {
     createSendToken,
     verifyToken,
     registerUser,
+    completeUserRegistration,
     createPasswordResetToken,
     resetPassword,
     generateEmailVerificationToken,
@@ -198,5 +244,6 @@ module.exports = {
     verifyAccount,
     findUserByPhone,
     sendPhoneVerification,
-    deleteUser
+    deleteUser,
+    countUsers
 };

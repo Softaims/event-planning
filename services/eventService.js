@@ -539,7 +539,7 @@ exports.fetchTicketmasterEventsForAISearch2 = async ({
   segmentId,
   genreId,
   subgenreId,
-  radius = 75,
+  radius = 30,
 }) => {
   try {
     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
