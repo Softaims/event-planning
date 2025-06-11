@@ -13,6 +13,7 @@ const path = require("path");
 const stringSimilarity = require("string-similarity");
 const fs = require("fs");
 const s3Service = require("../utils/s3Service");
+const axios = require("axios");
 
 // exports.getEvents = catchAsync(async (req, res, next) => {
 //   let {
@@ -1990,6 +1991,171 @@ exports.getEventDetails = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
+
+
+exports.getEventDetailsByPlaceId = catchAsync(async (req, res, next) => {
+  const { placeId } = req.params;
+
+  if (!placeId) {
+    return next(new AppError("Place ID is required.", 400));
+  }
+
+  const fields = [
+    "name",
+    "formatted_address",
+    "geometry",
+    "opening_hours",
+    "website",
+    "types",
+    "photos",
+    "rating",
+    "user_ratings_total",
+    "editorial_summary"
+  ].join(",");
+
+  console.log(placeId,GOOGLE_API_KEY, 'id')
+
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${GOOGLE_API_KEY}`;
+
+  const response = await axios.get(url);
+  const result = response.data.result;
+
+  if (!result) {
+    return next(new AppError("No venue found with this Place ID.", 404));
+  }
+
+  // Construct photo URL if available
+  const image = result.photos?.[0]?.photo_reference
+    ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${result.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
+    : null;
+
+  const data = {
+    name: result.name,
+    description: result.editorial_summary?.overview || "",
+    location: result.formatted_address,
+    latitude: result.geometry?.location?.lat,
+    longitude: result.geometry?.location?.lng,
+    website: result.website || "",
+    hours: result.opening_hours?.weekday_text || [],
+    tags: result.types || [],
+    image,
+    rating: result.rating || null,
+    total_ratings: result.user_ratings_total || 0,
+    source: "Google Places"
+  };
+
+  res.status(200).json({
+    status: "success",
+    message: "Venue details fetched successfully.",
+    data
+  });
+});
+
+// with foursquare integrate api
+
+
+exports.getEventDetailsByPlaceId2 = catchAsync(async (req, res, next) => {
+  const { placeId } = req.params;
+
+  if (!placeId) {
+    return next(new AppError("Place ID is required.", 400));
+  }
+
+  // Step 1: Fetch from Google Places
+  const googleFields = [
+    "name",
+    "formatted_address",
+    "geometry",
+    "opening_hours",
+    "website",
+    "types",
+    "photos",
+    "rating",
+    "user_ratings_total",
+    "editorial_summary"
+  ].join(",");
+
+  const googleUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${googleFields}&key=${GOOGLE_API_KEY}`;
+
+  const googleResponse = await axios.get(googleUrl);
+  const googleData = googleResponse.data.result;
+
+  if (!googleData) {
+    return next(new AppError("No venue found with this Place ID.", 404));
+  }
+
+  const lat = googleData.geometry?.location?.lat;
+  const lng = googleData.geometry?.location?.lng;
+
+  // Step 2: Fetch from Foursquare using lat/lng
+  const fsqUrl = `https://api.foursquare.com/v3/places/search?ll=${lat},${lng}&limit=1`;
+  const fsqResponse = await axios.get(fsqUrl, {
+    headers: {
+      Authorization: FOURSQUARE_API_KEY
+    }
+  });
+
+  const fsqPlace = fsqResponse.data.results?.[0];
+
+  let fsqDetails = {};
+  let detail;
+    let distance = null;
+  if (fsqPlace?.fsq_id) {
+     distance = fsqPlace.distance || null;
+    // Get detailed Foursquare venue info
+    const detailsUrl = `https://api.foursquare.com/v3/places/${fsqPlace.fsq_id}`;
+    const detailsResponse = await axios.get(detailsUrl, {
+      headers: {
+        Authorization: FOURSQUARE_API_KEY
+      }
+    });
+
+     detail = detailsResponse.data;
+
+    fsqDetails = {
+      fsq_description: detail.description || "",
+      fsq_categories: detail.categories?.map(cat => cat.name) || [],
+      fsq_website: detail.website || "",
+      fsq_hours: detail.hours?.display || [],
+      fsq_tags: detail.tags || []
+    };
+  }
+
+
+
+  // Construct Google Image
+  const image = googleData.photos?.[0]?.photo_reference
+    ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${googleData.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
+    : null;
+
+  const data = {
+    name: googleData.name,
+    description: googleData.editorial_summary?.overview || fsqDetails.fsq_description || "",
+    location: googleData.formatted_address,
+    latitude: lat,
+    longitude: lng,
+    website: googleData.website || fsqDetails.fsq_website || "",
+    hours: googleData.opening_hours?.weekday_text || fsqDetails.fsq_hours || [],
+    tags: [...new Set([...(googleData.types || []), ...(fsqDetails.fsq_tags || []), ...(fsqDetails.fsq_categories || [])])],
+    image,
+    distance,
+    rating: googleData.rating || null,
+    total_ratings: googleData.user_ratings_total || 0,
+    source: "Google + Foursquare"
+  };
+
+  res.status(200).json({
+    status: "success",
+    message: "Enhanced venue details fetched successfully.",
+    data,
+    // fsqPlace,
+    // detail
+  });
+});
+
 
 exports.getUserEventOverview = catchAsync(async (req, res, next) => {
   const userId = req.user.id;

@@ -174,136 +174,6 @@ const formatMultipleParams = (param) => {
         .join("|");
 };
 
-// exports.fetchTicketmasterEvents = async ({
-//   query,
-//   city,
-//   latitude,
-//   longitude,
-//   eventCategory,
-//   size,
-//   page,
-//   radius,
-// }) => {
-//   try {
-//     // const filteredQuery = filterQuery(query);
-//     const formattedEventCategory = formatMultipleParams(eventCategory);
-
-//     const response = await axios.get(TICKET_MASTER_URL, {
-//       params: {
-//         apikey: process.env.TICKETMASTER_API_KEY,
-//         city,
-//         classificationName: formattedEventCategory,
-//         latlong: latitude && longitude ? `${latitude},${longitude}` : "",
-//         radius,
-//         size,
-//         page,
-//       },
-//     });
-
-//     return response.data._embedded?.events || [];
-//   } catch (error) {
-//     logger.error("Error fetching Ticketmaster events:", error);
-//     throw new AppError("Failed to fetch events from Ticketmaster", 500);
-//   }
-// };
-
-// exports.fetchGooglePlaces = async ({
-//   query,
-//   latitude,
-//   longitude,
-//   placeCategory,
-//   city,
-//   radius = 5000,
-//   size = 10,
-// }) => {
-//   try {
-//     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-//     if (!apiKey) {
-//       throw new AppError("Google Places API key is missing", 500);
-//     }
-
-//     if (!latitude || !longitude) {
-//       throw new AppError("Latitude and Longitude are required", 401);
-//     }
-
-//     let url;
-
-//     if (query) {
-//       url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
-//         query
-//       )}&location=${latitude},${longitude}&radius=${radius}`;
-//       if (city) url += ` in ${encodeURIComponent(city)}`;
-//     } else {
-//       url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
-//     }
-
-//     if (placeCategory) {
-//       url += `&type=${encodeURIComponent(placeCategory)}`;
-//     }
-
-//     const response = await axios.get(url);
-
-//     if (response.data.status !== "OK") {
-//       logger.error(`Google Places API error: ${response.data.status}`);
-//       return [];
-//     }
-
-//     return response.data.results.slice(0, size);
-//   } catch (error) {
-//     logger.error("Error fetching Google Places data:", error);
-//     throw new AppError("Failed to fetch places from Google Places API", 500);
-//   }
-// };
-
-
-// ------------- my old function till 21 april 
-
-
-
-// exports.fetchTicketmasterEvents = async ({
-//   query,
-//   city,
-//   latitude,
-//   longitude,
-//   eventCategory,
-//   radius = 200,
-// }) => {
-//   try {
-//     const formattedEventCategory = formatMultipleParams(eventCategory);
-//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
-
-//     const params = {
-//       apikey: process.env.TICKETMASTER_API_KEY,
-//       ...(latlong && { latlong }),
-//       ...(formattedEventCategory && formattedEventCategory !== "*" && {
-//         classificationName: formattedEventCategory,
-//       }),
-//       locale: "*",
-//       radius,
-//       size: 200,
-//     };
-
-//     console.log("🔍 Ticketmaster API Request Params:", params);
-
-//     const response = await axios.get(TICKET_MASTER_URL, { params });
-//     const events = response.data._embedded?.events || [];
-
-//     const now = new Date();
-//     const futureEvents = events.filter(
-//       (event) => new Date(event.dates?.start?.dateTime) > now
-//     );
-
-//     console.log(`✅ Fetched ${futureEvents.length} future events`);
-//     return futureEvents;
-//   } catch (error) {
-//     logger.error("Error fetching Ticketmaster events:", error);
-//     throw new AppError("Failed to fetch events from Ticketmaster", 500);
-//   }
-// };
-
-
-// ------------- my old function till 21 april 
-
 
 // ------------- my new function from 21 april 
 
@@ -321,51 +191,7 @@ const categoryConfig = {
   "Other": { classificationId: "KZFzniwnSyZfZ7v7n1" },
 };
 
-// exports.fetchTicketmasterEvents = async ({
-//   query,
-//   city,
-//   latitude,
-//   longitude,
-//   eventCategory,
-//   radius = 200,
-// }) => {
-//   try {
-//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
 
-//     const category = eventCategory || "Other";
-//     const categoryData = categoryConfig[category] || categoryConfig["Other"];
-
-//     const params = {
-//       apikey: process.env.TICKETMASTER_API_KEY,
-//       locale: "*",
-//       size: 200,
-//       radius,
-//       ...(latlong && { latlong }),
-//       ...(categoryData.classificationId && { classificationId: categoryData.classificationId }),
-//       ...(categoryData.genreId && { genreId: categoryData.genreId }),
-//       ...(query && { keyword: query }),
-//     };
-
-//     console.log("🎫 Ticketmaster API Params:", params);
-
-//     const response = await axios.get(TICKET_MASTER_URL, { params });
-//     const events = response.data._embedded?.events || [];
-
-//     const now = new Date();
-
-//     const filteredEvents = events.filter((event) => {
-//       const date = new Date(event.dates?.start?.dateTime);
-//       const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
-//       return date > now && (!city || venueCity.includes(city.toLowerCase()));
-//     });
-
-//     console.log(`✅ Fetched ${filteredEvents.length} events from Ticketmaster`);
-//     return filteredEvents;
-//   } catch (error) {
-//     logger.error("❌ Error fetching Ticketmaster events:", error);
-//     throw new AppError("Failed to fetch events from Ticketmaster", 500);
-//   }
-// };
 
 
 // comented on 05 may and it is live
@@ -425,58 +251,6 @@ exports.fetchTicketmasterEvents = async ({
 };
 
 
-
-// exports.fetchTicketmasterEventsForAISearch = async ({
-//   keyword,
-//   city,
-//   latitude,
-//   longitude,
-//   segmentName,
-//   radius = 75, // Default for AI Search
-// }) => {
-//   try {
-//     const filteredQuery = filterQuery3(keyword);
-//     const latlong = latitude && longitude ? `${latitude},${longitude}` : "";
-
-//     // Lookup category config by segment name (e.g. "Music", "Comedy", "Sports")
-//     const categoryData = segmentName && categoryConfig[segmentName] ? categoryConfig[segmentName] : null;
-
-//     // const segmentName = segment;
-//     // console.log(segmentName, 'name')
-//     const params = {
-//       apikey: process.env.TICKETMASTER_API_KEY,
-//       locale: "*",
-//       size: 200,
-//       radius,
-//       // ...(keyword && { keyword }),
-//       ...(city && { city }),
-//       ...(segmentName && { segmentName }),
-
-//       ...(latlong && { latlong }),
-//       ...(filteredQuery && { keyword: filteredQuery }),
-//       ...(categoryData?.classificationId && { classificationId: categoryData.classificationId }),
-//       ...(categoryData?.genreId && { genreId: categoryData.genreId }),
-//     };
-
-//     console.log("🎫 Ticketmaster AI Search Params:", params);
-
-//     const response = await axios.get(TICKET_MASTER_URL, { params });
-//     const events = response.data._embedded?.events || [];
-
-//     const now = new Date();
-//     const filteredEvents = events.filter((event) => {
-//       const date = new Date(event.dates?.start?.dateTime);
-//       const venueCity = event._embedded?.venues?.[0]?.city?.name?.toLowerCase() || "";
-//       return date > now && (!city || venueCity.includes(city.toLowerCase()));
-//     });
-
-//     console.log(`✅ [AI] Fetched ${filteredEvents.length} Ticketmaster events`);
-//     return filteredEvents;
-//   } catch (error) {
-//     logger.error("❌ [AI] Ticketmaster fetch error:", error);
-//     throw new AppError("AI Ticketmaster fetch failed", 500);
-//   }
-// };
 
 
 exports.fetchTicketmasterEventsForAISearch = async ({
@@ -576,76 +350,7 @@ exports.fetchTicketmasterEventsForAISearch2 = async ({
 };
 
 
-// ------------- my new function from 21 april 
 
-// exports.fetchGooglePlaces = async ({
-//   query,
-//   latitude,
-//   longitude,
-//   placeCategory,
-//   city,
-//   radius,
-//   size = 200,
-// }) => {
-//   try {
-//     console.log(radius, 'radiu')
-//     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-//     if (!apiKey) {
-//       throw new AppError("Google Places API key is missing", 500);
-//     }
-
-//     if (!latitude || !longitude) {
-//       throw new AppError("Latitude and Longitude are required", 401);
-//     }
-
-//     let url;
-
-//     // if (query) {
-//     //   url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
-//     //     query
-//     //   )}&location=${latitude},${longitude}&radius=${radius}`;
-//     //   console.log(url,'rul')
-//     //   if (city) url += ` in ${encodeURIComponent(city)}`;
-//     // } else {
-//     //   url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
-//     //   console.log(url,'rul')
-
-//     // }
-
-//     // if (placeCategory) {
-//     //   url += `&type=${encodeURIComponent(placeCategory)}`;
-//     // }
-
-//     if (query) {
-//       let fullQuery = query;
-//       if (placeCategory) fullQuery += ` ${placeCategory}`;
-//       if (city) fullQuery += ` in ${city}`;
-    
-//       url = `${GOOGLE_PLACES_TEXT_SEARCH_URL}?key=${apiKey}&query=${encodeURIComponent(
-//         fullQuery
-//       )}&location=${latitude},${longitude}&radius=${radius}`;
-//     } else {
-//       url = `${GOOGLE_PLACES_NEARBY_SEARCH_URL}?key=${apiKey}&location=${latitude},${longitude}&radius=${radius}`;
-//       if (placeCategory) {
-//         url += `&type=${encodeURIComponent(placeCategory)}`;
-//       }
-//     }
-    
-//     console.log(url, 'finalurl')
-
-//     const response = await axios.get(url);
-
-//     if (response.data.status !== "OK") {
-//       logger.error("Google Places API error response:", response.data);
-//       return [];
-//     }
-
-//     return response.data.results.slice(0, size);
-//   } catch (error) {
-//     logger.error("Error fetching Google Places data:", error);
-//     throw new AppError("Failed to fetch places from Google Places API", 500);
-//   }
-// };
 
 
 // ------------- my new function from 02 May 2025.
@@ -700,16 +405,7 @@ console.log(url, 'finalurl')
 };
 
 
-// exports.getEventsFromDb = async () => {
-//   return await prisma.event.findMany({
-//     where: {
-//       source: "UNI Featured",
-//     },
-//     orderBy: {
-//       createdAt: "desc",
-//     },
-//   });
-// };
+
 
 exports.getEventsFromDb = async ({ query = "", latitude, longitude }) => {
   const filters = {

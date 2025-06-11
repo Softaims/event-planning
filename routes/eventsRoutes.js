@@ -125,6 +125,14 @@ router.get(
   eventsController.getEventDetails
 );
 
+
+// google place details api :- 
+router.get("/event-details/:placeId", authMiddleware.protect, eventsController.getEventDetailsByPlaceId);
+
+
+
+// google place details with foursquare api :- 
+router.get("/event-detail/:placeId", authMiddleware.protect, eventsController.getEventDetailsByPlaceId2);
 /**
  * @swagger
  * /events/me:

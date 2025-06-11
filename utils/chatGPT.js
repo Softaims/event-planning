@@ -381,10 +381,10 @@ Only return the JSON object. Do not include any explanation or commentary.
   const rawContent = response.data.choices[0].message.content.trim();
 
   const usage = response.data.usage;
-  //  console.log(usage, 'usage')
-  // console.log("Input Tokens:", usage.prompt_tokens);
-  // console.log("Output Tokens:", usage.completion_tokens);
-  // console.log("Total Tokens:", usage.total_tokens);
+   console.log(usage, 'usage')
+  console.log("Input Tokens:", usage.prompt_tokens);
+  console.log("Output Tokens:", usage.completion_tokens);
+  console.log("Total Tokens:", usage.total_tokens);
 
 
   try {

@@ -536,6 +536,12 @@
   {
     "": 28,
     "Genre": "Basketball",
+    "Subgenre": "NBA",
+    "Sample Prompt": "places to play basketball near me"
+  },
+  {
+    "": 28,
+    "Genre": "Basketball",
     "Subgenre": "Minor League",
     "Sample Prompt": "Where can I find minor league experiences nearby?"
   },
