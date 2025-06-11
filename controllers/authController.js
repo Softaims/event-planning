@@ -403,7 +403,7 @@ exports.register = catchAsync(async (req, res, next) => {
   // 🔢 Auto-increment logic
   const totalUsers = await authService.countUsers();
   const userRegistrationNumber = totalUsers + 1;
-  const is_limit_crossed = userRegistrationNumber > 10;
+  const is_limit_crossed = userRegistrationNumber > 1000;
 
   const defaultPreferences = getDefaultPreferences();
 
