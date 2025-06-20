@@ -61,7 +61,7 @@ router.get("/home",  eventsController.getEventsInHome);
 
 router.get("/ai-search", authMiddleware.protect, eventsController.aiSearchEvents);
 
-router.get("/ai-search/classification", authMiddleware.protect, eventsController.aiSearchEvents2);
+router.get("/ai-search/classification", authMiddleware.protect, eventsController.aiSearchEvents2);// live api
 
 router.get("/ai-search/question", authMiddleware.protect, eventsController.aiSearchEvents3);
 

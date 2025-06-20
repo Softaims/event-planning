@@ -702,6 +702,9 @@ const shouldCallGooglePlaces =
 
   let allEvents = [...ticketmasterEvents, ...googlePlaces, ...dbEvents];
 
+  
+
+
   // Remove duplicates using composite key + optional string similarity
   const seenKeys = new Set();
   const dedupedEvents = [];
@@ -747,8 +750,46 @@ const shouldCallGooglePlaces =
     }
   }
 
+function isNewYorkLocation(lat, lng) {
+  // Approximate bounds for NYC
+  const nyLat = parseFloat(lat);
+  const nyLng = parseFloat(lng);
+  console.log(nyLat, nyLng,'nyg')
+  // return nyLat >= 40.4 && nyLat <= 41.0 && nyLng >= -74.3 && nyLng <= -73.5;
+
+  // Broader bounding box that includes NYC boroughs and Long Island
+  return nyLat >= 40.0 && nyLat <= 41.0 && nyLng >= -74.5 && nyLng <= -73.5;
+}
+
+let refinedDedupedEvents = dedupedEvents;
+
+if (isNewYorkLocation(latitude, longitude)) {
+  const grouped = {};
+console.log("hi")
+  for (let event of dedupedEvents) {
+    const name = (event.name || "").toLowerCase().trim();
+    const location = (event.location || "").toLowerCase().trim();
+    const key = `${name}_${location}`;
+
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+
+    grouped[key].push(event);
+  }
+
+  // Keep only the event with the nearest future date per group
+  refinedDedupedEvents = Object.values(grouped).map(events => {
+    return events.reduce((closest, curr) => {
+      const currDate = curr.dateTime ? new Date(curr.dateTime) : new Date(8640000000000000);
+      const closestDate = closest.dateTime ? new Date(closest.dateTime) : new Date(8640000000000000);
+      return currDate < closestDate ? curr : closest;
+    });
+  });
+}
+
   // Add distance info
-  const enrichedEvents = dedupedEvents.map((event) => {
+  const enrichedEvents = refinedDedupedEvents.map((event) => {
     const distance =
       event.latitude && event.longitude
         ? getDistanceFromLatLonInKm(
@@ -761,6 +802,12 @@ const shouldCallGooglePlaces =
 
     return { ...event, distance };
   });
+
+
+
+
+
+
 
   // Add interaction data
   const finalResults = await Promise.all(
@@ -792,6 +839,11 @@ const shouldCallGooglePlaces =
     return a.distance - b.distance;
   });
 
+  console.log('✅ dedupedEvents:', dedupedEvents.length);
+console.log('✅ enrichedEvents:', enrichedEvents.length);
+// console.log('✅ finalEvents (post-NY filter):', finalEvents.length);
+
+
   res.status(200).json({
     status: "success",
     message: "Events and places fetched successfully.",
@@ -800,6 +852,11 @@ const shouldCallGooglePlaces =
     },
   });
 });
+
+
+
+
+
 
 // with duplicate functionlity live on 21 april and it is working but commeneted on 22
 
