@@ -1762,7 +1762,7 @@ exports.aiSearchEvents3 = catchAsync(async (req, res, next) => {
 
 // ai search with functionlity of segment id , subgenre id live from 09 may 2025.
 exports.aiSearchEvents2 = catchAsync(async (req, res, next) => {
-  const { query, latitude, longitude, radius = 30 } = req.query;
+  const { query, latitude, longitude, radius = 2000 } = req.query;
   const userId = req.user.id;
 
   if (!query || query.trim() === "") {
