@@ -350,19 +350,37 @@ exports.register = catchAsync(async (req, res, next) => {
     return next(new AppError("Unauthorized. User ID not found in request.", 401));
   }
 
-  const {
-    email,
-    password,
-    firstName,
-    lastName,
-    dob,
-    pronouns,
-    lat,
-    long,
-    fcmToken,
-    uniqueCode = "NORMAL",
-  } = req.body;
+  // const {
+  //   email,
+  //   password,
+  //   firstName,
+  //   lastName,
+  //   dob,
+  //   pronouns,
+  //   lat,
+  //   long,
+  //   fcmToken,
+  //   uniqueCode = "NORMAL",
+  // } = req.body;
 
+  // console.log(req.body, 'body')
+
+  let {
+  email,
+  password,
+  firstName,
+  lastName,
+  dob,
+  pronouns,
+  lat,
+  long,
+  fcmToken,
+  uniqueCode,
+} = req.body;
+
+if (!uniqueCode || uniqueCode.trim() === "") {
+  uniqueCode = "NORMAL";
+}
   const user = await authService.findUserById(userId);
 
   if (!user) {
