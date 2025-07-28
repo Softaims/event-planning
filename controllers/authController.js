@@ -387,7 +387,7 @@ if (!uniqueCode || uniqueCode.trim() === "") {
   if (!allowedCodes.includes(uniqueCode)) {
     return next(
       new AppError(
-        "The entered uniqueCode is not valid. Please enter a valid uniqueCode (NORMAL or UNIVIP).",
+        "The entered uniqueCode is not valid. Please enter a valid uniqueCode.",
         400
       )
     );
