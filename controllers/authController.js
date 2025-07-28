@@ -381,6 +381,17 @@ exports.register = catchAsync(async (req, res, next) => {
 if (!uniqueCode || uniqueCode.trim() === "") {
   uniqueCode = "NORMAL";
 }
+
+  // ✅ Add validation here
+  const allowedCodes = ["UNIVIP", "NORMAL"];
+  if (!allowedCodes.includes(uniqueCode)) {
+    return next(
+      new AppError(
+        "The entered uniqueCode is not valid. Please enter a valid uniqueCode (NORMAL or UNIVIP).",
+        400
+      )
+    );
+  }
   const user = await authService.findUserById(userId);
 
   if (!user) {
