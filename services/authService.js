@@ -13,8 +13,30 @@ const signToken = (user) => {
 };
 
 // JWT Token Verification
+// const verifyToken = async (token) => {
+//     return await util.promisify(jwt.verify)(token, process.env.JWT_SECRET_TOKEN);;
+// };
+
 const verifyToken = async (token) => {
-    return await util.promisify(jwt.verify)(token, process.env.JWT_SECRET_TOKEN);;
+  try {
+    return await util.promisify(jwt.verify)(token, process.env.JWT_SECRET_TOKEN);
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      const error = new Error("Token has expired");
+      error.statusCode = 401;
+      error.isTokenExpired = true;
+      throw error;
+    }
+
+    if (err.name === "JsonWebTokenError") {
+      const error = new Error("Invalid token");
+      error.statusCode = 401;
+      error.isInvalidToken = true;
+      throw error;
+    }
+
+    throw err; // unexpected errors
+  }
 };
 
 // Create JWT and Send Response

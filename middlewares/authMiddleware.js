@@ -21,7 +21,18 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  const decoded = await authService.verifyToken(token);
+  // const decoded = await authService.verifyToken(token);
+
+    let decoded;
+  try {
+    decoded = await authService.verifyToken(token);
+  } catch (err) {
+    if (err.statusCode === 401) {
+      logger.error(`${err.message}`);
+      return next(new AppError(err.message, 401));
+    }
+    return next(err); // unexpected error
+  }
 
   const user = await authService.findUserById(decoded.user_id);
 
