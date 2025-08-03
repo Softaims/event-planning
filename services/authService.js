@@ -22,7 +22,7 @@ const verifyToken = async (token) => {
     return await util.promisify(jwt.verify)(token, process.env.JWT_SECRET_TOKEN);
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      const error = new Error("Token has expired");
+      const error = new Error("Your login token is expired , please try to login again");
       error.statusCode = 401;
       error.isTokenExpired = true;
       throw error;
