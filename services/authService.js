@@ -23,14 +23,14 @@ const verifyToken = async (token) => {
   } catch (err) {
     if (err.name === "TokenExpiredError") {
       const error = new Error("Your login token is expired , please try to login again");
-      error.statusCode = 401;
+      error.statusCode = 403;
       error.isTokenExpired = true;
       throw error;
     }
 
     if (err.name === "JsonWebTokenError") {
       const error = new Error("Invalid token");
-      error.statusCode = 401;
+      error.statusCode = 403;
       error.isInvalidToken = true;
       throw error;
     }

@@ -17,7 +17,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   if (!token) {
     logger.error("No token provided");
     return next(
-      new AppError("You are not logged in! Please log in to get access.", 401)
+      new AppError("You are not logged in! Please log in to get access.", 403)
     );
   }
 
@@ -27,9 +27,9 @@ exports.protect = catchAsync(async (req, res, next) => {
   try {
     decoded = await authService.verifyToken(token);
   } catch (err) {
-    if (err.statusCode === 401) {
+    if (err.statusCode === 403) {
       logger.error(`${err.message}`);
-      return next(new AppError(err.message, 401));
+      return next(new AppError(err.message, 403));
     }
     return next(err); // unexpected error
   }
@@ -39,14 +39,14 @@ exports.protect = catchAsync(async (req, res, next) => {
   if (!user) {
     logger.error("Token does not belong to a valid user");
     return next(
-      new AppError("The user belonging to this token no longer exists.", 401)
+      new AppError("The user belonging to this token no longer exists.", 403)
     );
   }
 
   // Check if the token matches the one stored in the database
   if (user.currentAuthToken !== token) {
     logger.error("Token is no longer valid (user logged in again)");
-    return next(new AppError("Session expired. Please log in again.", 401));
+    return next(new AppError("Session expired. Please log in again.", 403));
   }
 
   // logger.info(`Authenticated user: ${JSON.stringify(user)}`);
